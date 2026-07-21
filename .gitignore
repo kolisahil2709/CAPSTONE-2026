@@ -1,0 +1,22 @@
+# Arduino build artifacts
+**/build/
+**/esp32.esp32.esp32s3/
+
+# Executables and large archives
+**/arduino-cli.exe
+**/arduino-cli.zip
+
+# Node.js dependencies and logs
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local backup files
+*.bak
+*.tmp
+*~
+
+# OS/System generated files
+.DS_Store
+Thumbs.db
