@@ -2404,7 +2404,7 @@ void disableWatchdog() {
 #endif
 }
 
-void enableWatchdog(); // Forward declaration for setup
+void enableWatchdog(); // declaration for setup
 void enableWatchdog() {
   Serial.println("🛡️ Re-enabling standard 60-second Task Watchdog...");
 #if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
