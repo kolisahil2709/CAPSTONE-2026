@@ -1,4 +1,5 @@
 #define WITHOUT_HARDWARE // Comment out this line to enable TFT, RFID, and Fingerprint hardware
+// Collaborative Git setup verified - ready for development
 
 #include "eeprom_logger.h"
 #include "time.h"
