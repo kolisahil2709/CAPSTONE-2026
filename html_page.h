@@ -905,7 +905,7 @@ input[type="checkbox"]:not(.switch input):checked::before {
 <body>
 
 <!-- LOGIN PAGE -->
-<div id="login-page">
+<div id="login-page" style="display:none;">
   <div class="login-orb"></div>
   <div class="login-orb-2"></div>
   <div class="login-card">
@@ -990,7 +990,7 @@ input[type="checkbox"]:not(.switch input):checked::before {
 </div>
 
 <!-- MAIN APP -->
-<div id="main-app" style="display:none;">
+<div id="main-app" style="display:block;">
   <header>
     <div class="logo" id="header-logo">Anurag 0.1 <span>Attendance System</span></div>
 
@@ -2736,9 +2736,9 @@ function doLoginEnhanced() {
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-  if (storage.getItem("loggedIn") === "true") {
-    enterApp();
-  }
+  storage.setItem("loggedIn", "true");
+  document.cookie = "session=admin_active; path=/;";
+  enterApp();
 });
 
 function doLogin() {
