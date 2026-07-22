@@ -1,0 +1,15 @@
+# Build outputs & binaries
+build/
+*.bin
+*.elf
+*.map
+
+# Database files
+attendance.db
+
+# Cache & Temporary files
+__pycache__/
+*.pyc
+*.bak
+.theia/
+cd
