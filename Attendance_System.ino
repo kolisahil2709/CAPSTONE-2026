@@ -3,7 +3,6 @@
 #include <Adafruit_Fingerprint.h>
 #include <Arduino.h>
 #include <AsyncTCP.h>
-#include <WiFiClientSecure.h>
 #include <DNSServer.h>
 #include <ESPAsyncWebServer.h>
 #include <ETH.h>
@@ -13,8 +12,10 @@
 #include <SPI.h>
 #include <Update.h>
 #include <WiFi.h>
-#include <esp_task_wdt.h>
+#include <WiFiClientSecure.h>
 #include <driver/spi_master.h>
+#include <esp_task_wdt.h>
+
 
 // SPI device handles removed as manual ESP-IDF bus locking is not needed
 size_t fsTotalBytes = 0;
@@ -43,13 +44,17 @@ extern bool tftForceClockRedraw;
 
 void drawTftDefaultScreen();
 void updateTftClock();
-void drawTftSuccessScreen(String name, String dir, String status, String time, String roll);
+void drawTftSuccessScreen(String name, String dir, String status, String time,
+                          String roll);
 void drawTftDeniedScreen(String name, String reason);
 void drawTftDirectionSelectionScreen(String name, String roll);
 void drawTft2FAPromptScreen(String name, String roll);
-void drawTftEnrollScanningScreen(String type, int id, int step, String msg, bool forceRedraw = false);
-void drawTftEnrollConfirmedScreen(String name, String roll, String role, String type);
-void drawProfilePhoto(String roll, int x, int y, int w, int h, uint16_t bgColor = 0x10A2);
+void drawTftEnrollScanningScreen(String type, int id, int step, String msg,
+                                 bool forceRedraw = false);
+void drawTftEnrollConfirmedScreen(String name, String roll, String role,
+                                  String type);
+void drawProfilePhoto(String roll, int x, int y, int w, int h,
+                      uint16_t bgColor = 0x10A2);
 void savePunchRecord(String id, bool isFinger, String selectedDir);
 void onBrandingUpdated();
 void loadShiftConfig();
@@ -74,8 +79,9 @@ void loop();
 #define ETH_CS_PIN 14  // Chip Select pin for W5500 (Adjust if needed)
 #define ETH_INT_PIN -1 // Interrupt pin (optional, -1 if not used)
 #define ETH_RST_PIN -1 // Reset pin (optional, -1 if not used)
-#include <Wire.h>
 #include <SPI.h>
+#include <Wire.h>
+
 
 // I2C Configuration for external EEPROM
 #define LCD_SDA_PIN 8
@@ -88,59 +94,63 @@ void loop();
 // #define USE_ST7796
 
 // TFT Display & Touch Pins Configuration
-#define TFT_CS    15 // TFT Chip Select
-#define TFT_RS     7 // TFT Register Select (Data/Command)
-#define TFT_RST    6 // TFT Reset
-#define TFT_BL     1 // TFT Backlight control pin
-#define TFT_MOSI  11 // Shared SPI MOSI
-#define TFT_SCLK  12 // Shared SPI SCLK
-#define TFT_MISO  13 // Shared SPI MISO / T_DOUT
-#define T_CS      18 // Touch CS
-#define T_IRQ     21 // Touch IRQ
+#define TFT_CS 15   // TFT Chip Select
+#define TFT_RS 7    // TFT Register Select (Data/Command)
+#define TFT_RST 6   // TFT Reset
+#define TFT_BL 1    // TFT Backlight control pin
+#define TFT_MOSI 11 // Shared SPI MOSI
+#define TFT_SCLK 12 // Shared SPI SCLK
+#define TFT_MISO 13 // Shared SPI MISO / T_DOUT
+#define T_CS 18     // Touch CS
+#define T_IRQ 21    // Touch IRQ
 
 #define LGFX_USE_V1
 #include <LovyanGFX.hpp>
 
 class LGFX : public lgfx::LGFX_Device {
-  lgfx::Bus_SPI        _bus_instance;
+  lgfx::Bus_SPI _bus_instance;
 #if defined(USE_ILI9486)
-  lgfx::Panel_ILI9486  _panel_instance;
+  lgfx::Panel_ILI9486 _panel_instance;
 #elif defined(USE_ST7796)
-  lgfx::Panel_ST7796   _panel_instance;
+  lgfx::Panel_ST7796 _panel_instance;
 #else
-  lgfx::Panel_ILI9488  _panel_instance; // Default ILI9488
+  lgfx::Panel_ILI9488 _panel_instance; // Default ILI9488
 #endif
-  lgfx::Light_PWM      _light_instance;
-  lgfx::Touch_XPT2046  _touch_instance;
+  lgfx::Light_PWM _light_instance;
+  lgfx::Touch_XPT2046 _touch_instance;
 
 public:
   LGFX(void) {
     {
       auto cfg = _bus_instance.config();
-      cfg.spi_host = SPI2_HOST;     // Use FSPI (SPI2_HOST)
+      cfg.spi_host = SPI2_HOST; // Use FSPI (SPI2_HOST)
       cfg.spi_mode = 0;
-      cfg.freq_write = 15000000;    // 15MHz write speed (eliminates ghosting/signal reflections on ILI9488)
-      cfg.freq_read  = 16000000;    // 16MHz read speed
-      cfg.pin_sclk = TFT_SCLK;      // Shared SPI Clock
-      cfg.pin_mosi = TFT_MOSI;      // Shared SPI MOSI
-      cfg.pin_miso = TFT_MISO;      // Shared SPI MISO (T_DOUT)
-      cfg.pin_dc   = TFT_RS;        // TFT RS/DC (GPIO 7) - Configured on the bus
-      cfg.dma_channel = 0;          // Disable DMA to prevent background transfers from colliding with Ethernet driver on the shared SPI bus
+      cfg.freq_write = 15000000; // 15MHz write speed (eliminates
+                                 // ghosting/signal reflections on ILI9488)
+      cfg.freq_read = 16000000;  // 16MHz read speed
+      cfg.pin_sclk = TFT_SCLK;   // Shared SPI Clock
+      cfg.pin_mosi = TFT_MOSI;   // Shared SPI MOSI
+      cfg.pin_miso = TFT_MISO;   // Shared SPI MISO (T_DOUT)
+      cfg.pin_dc = TFT_RS;       // TFT RS/DC (GPIO 7) - Configured on the bus
+      cfg.dma_channel =
+          0; // Disable DMA to prevent background transfers from colliding with
+             // Ethernet driver on the shared SPI bus
       _bus_instance.config(cfg);
       _panel_instance.setBus(&_bus_instance);
     }
     {
       auto cfg = _panel_instance.config();
-      cfg.pin_cs           = TFT_CS;  // TFT CS (GPIO 15)
-      cfg.pin_rst          = TFT_RST; // TFT RST (GPIO 6)
-      cfg.panel_width      = 320;     // Physical panel width
-      cfg.panel_height     = 480;     // Physical panel height
-      cfg.offset_x         = 0;
-      cfg.offset_y         = 0;
-      cfg.readable         = false;
-      cfg.invert           = false;
-      cfg.rgb_order        = false;   // Set to true/false depending on panel color order
-      cfg.bus_shared       = true;    // Enable SPI bus sharing lock for the display panel
+      cfg.pin_cs = TFT_CS;    // TFT CS (GPIO 15)
+      cfg.pin_rst = TFT_RST;  // TFT RST (GPIO 6)
+      cfg.panel_width = 320;  // Physical panel width
+      cfg.panel_height = 480; // Physical panel height
+      cfg.offset_x = 0;
+      cfg.offset_y = 0;
+      cfg.readable = false;
+      cfg.invert = false;
+      cfg.rgb_order = false; // Set to true/false depending on panel color order
+      cfg.bus_shared =
+          true; // Enable SPI bus sharing lock for the display panel
       _panel_instance.config(cfg);
     }
     // Backlight configuration commented out to enable 100% manual control
@@ -159,18 +169,18 @@ public:
     */
     {
       auto cfg = _touch_instance.config();
-      cfg.x_min      = 300;
-      cfg.x_max      = 3900;
-      cfg.y_min      = 200;
-      cfg.y_max      = 3800;
-      cfg.pin_int    = T_IRQ;       // T_IRQ (GPIO 21)
-      cfg.bus_shared = true;        // Shares the SPI bus with the panel
-      cfg.spi_host   = SPI2_HOST;
-      cfg.pin_sclk   = TFT_SCLK;    // Corrected from pin_scl
-      cfg.pin_mosi   = TFT_MOSI;    // Corrected from pin_sda
-      cfg.pin_miso   = TFT_MISO;    // T_DOUT
-      cfg.pin_cs     = T_CS;        // T_CS (GPIO 18)
-      cfg.freq       = 1000000;     // SPI speed for touch controller (1MHz)
+      cfg.x_min = 300;
+      cfg.x_max = 3900;
+      cfg.y_min = 200;
+      cfg.y_max = 3800;
+      cfg.pin_int = T_IRQ;   // T_IRQ (GPIO 21)
+      cfg.bus_shared = true; // Shares the SPI bus with the panel
+      cfg.spi_host = SPI2_HOST;
+      cfg.pin_sclk = TFT_SCLK; // Corrected from pin_scl
+      cfg.pin_mosi = TFT_MOSI; // Corrected from pin_sda
+      cfg.pin_miso = TFT_MISO; // T_DOUT
+      cfg.pin_cs = T_CS;       // T_CS (GPIO 18)
+      cfg.freq = 1000000;      // SPI speed for touch controller (1MHz)
       _touch_instance.config(cfg);
       _panel_instance.setTouch(&_touch_instance);
     }
@@ -182,7 +192,16 @@ LGFX tft;
 
 // Non-blocking TFT state variables
 unsigned long tftMessageUntil = 0; // Holds high-priority punch screen
-enum TftState { TFT_BOOT, TFT_IDLE, TFT_PUNCH_SUCCESS, TFT_PUNCH_DENIED, TFT_DIRECTION_SELECT, TFT_WAITING_2FA_FINGER, TFT_ENROLL_SCANNING, TFT_ENROLL_CONFIRMED };
+enum TftState {
+  TFT_BOOT,
+  TFT_IDLE,
+  TFT_PUNCH_SUCCESS,
+  TFT_PUNCH_DENIED,
+  TFT_DIRECTION_SELECT,
+  TFT_WAITING_2FA_FINGER,
+  TFT_ENROLL_SCANNING,
+  TFT_ENROLL_CONFIRMED
+};
 TftState currentTftState = TFT_BOOT;
 bool tftForceClockRedraw = false;
 volatile bool tftWasPowerCycled = false;
@@ -226,22 +245,24 @@ String getActiveIPAddress() {
 void drawCalendarIcon(int centerX, int centerY, uint16_t color) {
   // Calendar base plate (white card with rounded corners)
   tft.fillRoundRect(centerX - 14, centerY - 14, 28, 28, 4, TFT_WHITE);
-  tft.drawRoundRect(centerX - 14, centerY - 14, 28, 28, 4, 0x528A); // Darker border
-  
+  tft.drawRoundRect(centerX - 14, centerY - 14, 28, 28, 4,
+                    0x528A); // Darker border
+
   // Red calendar header bar
   tft.fillRoundRect(centerX - 14, centerY - 14, 28, 8, 2, TFT_RED);
-  tft.fillRect(centerX - 14, centerY - 8, 28, 2, TFT_RED); // fill bottom rounded edge
-  
+  tft.fillRect(centerX - 14, centerY - 8, 28, 2,
+               TFT_RED); // fill bottom rounded edge
+
   // Binder loops (metallic look using silver/light grey color)
   tft.fillRoundRect(centerX - 9, centerY - 17, 3, 6, 1, 0xBDD7);
   tft.fillRoundRect(centerX + 6, centerY - 17, 3, 6, 1, 0xBDD7);
-  
+
   // Grid lines/dots representing dates (Blue-grey color)
   uint16_t gridColor = 0x528A;
   tft.fillRect(centerX - 9, centerY - 1, 3, 3, gridColor);
   tft.fillRect(centerX - 2, centerY - 1, 3, 3, gridColor);
   tft.fillRect(centerX + 5, centerY - 1, 3, 3, gridColor);
-  
+
   tft.fillRect(centerX - 9, centerY + 5, 3, 3, gridColor);
   tft.fillRect(centerX - 2, centerY + 5, 3, 3, gridColor);
   tft.fillRect(centerX + 5, centerY + 5, 3, 3, gridColor);
@@ -256,7 +277,7 @@ void drawNetworkIcon(int centerX, int centerY, uint16_t color, bool isWiFi) {
   uint16_t bg = 0x10A2;
   // Clear the icon bounding box (36x36 px centered at centerX, centerY)
   tft.fillRect(centerX - 18, centerY - 18, 36, 36, bg);
-  
+
   if (isWiFi) {
     // Large premium Wi-Fi Logo (Concentric Arcs pointing upwards)
     // Using fillArc for clean, thick arcs instead of thin lines
@@ -282,40 +303,46 @@ void drawLockVector(int centerX, int centerY) {
   // Shackle (Arc)
   tft.drawCircle(centerX, centerY - 6, 12, TFT_WHITE);
   tft.drawCircle(centerX, centerY - 6, 11, TFT_WHITE);
-  tft.fillRect(centerX - 12, centerY, 24, 8, 0x2000); // Mask bottom half of shackle
-  
+  tft.fillRect(centerX - 12, centerY, 24, 8,
+               0x2000); // Mask bottom half of shackle
+
   // Padlock Body
-  tft.fillRoundRect(centerX - 18, centerY, 36, 28, 4, 0xD000); // Premium dark red body
+  tft.fillRoundRect(centerX - 18, centerY, 36, 28, 4,
+                    0xD000); // Premium dark red body
   tft.drawRoundRect(centerX - 18, centerY, 36, 28, 4, TFT_RED);
-  
+
   // Keyhole
   tft.fillCircle(centerX, centerY + 8, 3, TFT_BLACK);
   tft.fillRect(centerX - 1, centerY + 10, 3, 8, TFT_BLACK);
 }
 
 // Draw a large thermometer icon (24x36 px) at (centerX, centerY)
-void drawTempIcon(int centerX, int centerY, uint16_t color, float temp, uint16_t bg) {
+void drawTempIcon(int centerX, int centerY, uint16_t color, float temp,
+                  uint16_t bg) {
   // Clear the icon area (24x36 px centered at centerX, centerY)
   tft.fillRect(centerX - 12, centerY - 18, 24, 36, bg);
 
   // Outer glass tube frame (rounded cap at top)
   tft.fillRoundRect(centerX - 5, centerY - 14, 10, 24, 5, color);
   tft.fillRoundRect(centerX - 3, centerY - 12, 6, 20, 3, bg);
-  
+
   tft.fillCircle(centerX, centerY + 10, 8, color);
   tft.fillCircle(centerX, centerY + 10, 6, TFT_RED); // Bulb body (red)
-  
+
   // Connect bulb and tube
   tft.fillRect(centerX - 2, centerY + 4, 4, 3, TFT_RED);
-  
+
   // Calculate dynamic mercury height (range 0 to 45°C mapped to 0 to 14 pixels)
   int mercuryHeight = (int)((temp / 45.0f) * 14.0f);
-  if (mercuryHeight < 0) mercuryHeight = 0;
-  if (mercuryHeight > 14) mercuryHeight = 14;
-  
+  if (mercuryHeight < 0)
+    mercuryHeight = 0;
+  if (mercuryHeight > 14)
+    mercuryHeight = 14;
+
   // Draw mercury in the tube
   if (mercuryHeight > 0) {
-    tft.fillRect(centerX - 2, centerY + 4 - mercuryHeight, 4, mercuryHeight, TFT_RED);
+    tft.fillRect(centerX - 2, centerY + 4 - mercuryHeight, 4, mercuryHeight,
+                 TFT_RED);
   }
 
   // Ticks on left side representing temperature scale
@@ -324,24 +351,31 @@ void drawTempIcon(int centerX, int centerY, uint16_t color, float temp, uint16_t
   tft.drawFastHLine(centerX - 9, centerY + 6, 3, color);
 }
 
-void drawAutoScaledString(const String& text, int centerX, int centerY, int font, float maxScale, int maxWidth, uint16_t color, uint16_t bg = 0, bool useBg = false) {
-  if (font == 1) tft.setFont(&fonts::Font0);
-  else if (font == 2) tft.setFont(&fonts::Font2);
-  else if (font == 4) tft.setFont(&fonts::Font4);
-  else if (font == 6) tft.setFont(&fonts::Font6);
-  
+void drawAutoScaledString(const String &text, int centerX, int centerY,
+                          int font, float maxScale, int maxWidth,
+                          uint16_t color, uint16_t bg = 0, bool useBg = false) {
+  if (font == 1)
+    tft.setFont(&fonts::Font0);
+  else if (font == 2)
+    tft.setFont(&fonts::Font2);
+  else if (font == 4)
+    tft.setFont(&fonts::Font4);
+  else if (font == 6)
+    tft.setFont(&fonts::Font6);
+
   int intScale = (int)maxScale;
-  if (intScale < 1) intScale = 1;
-  
+  if (intScale < 1)
+    intScale = 1;
+
   tft.setTextSize((float)intScale);
   int w = tft.textWidth(text.c_str());
-  
+
   while (w > maxWidth && intScale > 1) {
     intScale--;
     tft.setTextSize((float)intScale);
     w = tft.textWidth(text.c_str());
   }
-  
+
   tft.setTextDatum(MC_DATUM);
   if (useBg) {
     tft.setTextColor(color, bg);
@@ -352,20 +386,27 @@ void drawAutoScaledString(const String& text, int centerX, int centerY, int font
   tft.setTextSize(1.0f); // Reset text size scale
 }
 
-// Helper function to draw a line of centered text inside a card, clearing its previous text background first
-int drawCardLine(const String& text, int x, int y, int font, uint16_t color, uint16_t bg, int fontHeight) {
-  if (font == 1) tft.setFont(&fonts::Font0);
-  else if (font == 2) tft.setFont(&fonts::Font2);
-  else if (font == 4) tft.setFont(&fonts::Font4);
-  else if (font == 6) tft.setFont(&fonts::Font6);
-  
+// Helper function to draw a line of centered text inside a card, clearing its
+// previous text background first
+int drawCardLine(const String &text, int x, int y, int font, uint16_t color,
+                 uint16_t bg, int fontHeight) {
+  if (font == 1)
+    tft.setFont(&fonts::Font0);
+  else if (font == 2)
+    tft.setFont(&fonts::Font2);
+  else if (font == 4)
+    tft.setFont(&fonts::Font4);
+  else if (font == 6)
+    tft.setFont(&fonts::Font6);
+
   int intScale = 1;
   tft.setTextSize((float)intScale);
   int w = tft.textWidth(text.c_str());
-  
+
   int clearHeight = fontHeight * intScale + 6;
-  // Clear the text area with background color to prevent text overlapping/ghosting.
-  // We use 270 width to ensure complete coverage of the scaled text.
+  // Clear the text area with background color to prevent text
+  // overlapping/ghosting. We use 270 width to ensure complete coverage of the
+  // scaled text.
   tft.fillRect(x - 135, y - clearHeight / 2, 270, clearHeight, bg);
   tft.setTextColor(color, bg);
   tft.setTextDatum(MC_DATUM);
@@ -374,35 +415,45 @@ int drawCardLine(const String& text, int x, int y, int font, uint16_t color, uin
   return w;
 }
 
-// Helper function to draw left-aligned text inside a card, clearing its previous text background first
-void drawCardLineLeft(const String& text, int x, int y, int font, float maxScale, uint16_t color, uint16_t bg, int fontHeight) {
-  if (font == 1) tft.setFont(&fonts::Font0);
-  else if (font == 2) tft.setFont(&fonts::Font2);
-  else if (font == 4) tft.setFont(&fonts::Font4);
-  else if (font == 6) tft.setFont(&fonts::Font6);
-  
+// Helper function to draw left-aligned text inside a card, clearing its
+// previous text background first
+void drawCardLineLeft(const String &text, int x, int y, int font,
+                      float maxScale, uint16_t color, uint16_t bg,
+                      int fontHeight) {
+  if (font == 1)
+    tft.setFont(&fonts::Font0);
+  else if (font == 2)
+    tft.setFont(&fonts::Font2);
+  else if (font == 4)
+    tft.setFont(&fonts::Font4);
+  else if (font == 6)
+    tft.setFont(&fonts::Font6);
+
   int intScale = (int)maxScale;
-  if (intScale < 1) intScale = 1;
-  
+  if (intScale < 1)
+    intScale = 1;
+
   tft.setTextSize((float)intScale);
   int w = tft.textWidth(text.c_str());
   int maxWidth = 305 - 10 - x; // Clear margin boundary
-  
+
   while (w > maxWidth && intScale > 1) {
     intScale--;
     tft.setTextSize((float)intScale);
     w = tft.textWidth(text.c_str());
   }
-  
+
   int clearHeight = fontHeight * intScale + 6;
-  tft.fillRect(x, y - clearHeight / 2, maxWidth, clearHeight, bg); // Clear up to card right edge margin
+  tft.fillRect(x, y - clearHeight / 2, maxWidth, clearHeight,
+               bg); // Clear up to card right edge margin
   tft.setTextColor(color, bg);
   tft.setTextDatum(ML_DATUM); // Middle Left alignment
   tft.drawString(text.c_str(), x, y);
   tft.setTextSize(1.0f); // Reset text size scale
 }
 
-// Helper function to draw vector weather icons (Sunny, Moon, Cloudy, Rainy, Thunderstorm, Snowy)
+// Helper function to draw vector weather icons (Sunny, Moon, Cloudy, Rainy,
+// Thunderstorm, Snowy)
 void drawWeatherIcon(int centerX, int centerY, String condition, bool isNight) {
   uint16_t bg = 0x10A2; // Navy-blue card body color
   // Clear the icon area first (64x64 bounding box centered at centerX, centerY)
@@ -410,9 +461,10 @@ void drawWeatherIcon(int centerX, int centerY, String condition, bool isNight) {
 
   condition.toLowerCase();
 
-  if (condition.indexOf("local") != -1 || condition.indexOf("offline") != -1 || condition.equals("")) {
-    // Draw a premium local mode / offline icon: a clean wireless router with a slash
-    // Base/stand
+  if (condition.indexOf("local") != -1 || condition.indexOf("offline") != -1 ||
+      condition.equals("")) {
+    // Draw a premium local mode / offline icon: a clean wireless router with a
+    // slash Base/stand
     tft.fillRoundRect(centerX - 16, centerY + 12, 32, 6, 2, 0x528A);
     // Router body
     tft.fillRoundRect(centerX - 20, centerY + 4, 40, 8, 3, 0xBDF7);
@@ -421,17 +473,21 @@ void drawWeatherIcon(int centerX, int centerY, String condition, bool isNight) {
     tft.fillCircle(centerX - 6, centerY + 8, 1, 0x07FF);
     tft.fillCircle(centerX, centerY + 8, 1, 0x07FF);
     tft.fillCircle(centerX + 12, centerY + 8, 1, 0xF800); // Red error LED
-    
+
     // Antennas
     tft.drawLine(centerX - 15, centerY + 4, centerX - 18, centerY - 8, 0x528A);
     tft.drawLine(centerX + 15, centerY + 4, centerX + 18, centerY - 8, 0x528A);
-    
+
     // Disconnected Slash (Red)
-    tft.drawLine(centerX - 18, centerY + 18, centerX + 18, centerY - 18, 0xF800);
-    tft.drawLine(centerX - 17, centerY + 18, centerX + 19, centerY - 18, 0xF800);
-  }
-  else if (condition.indexOf("rain") != -1 || condition.indexOf("drizzle") != -1 || condition.indexOf("shower") != -1) {
-    // Rainy Icon: Layered 3D clouds + detailed teardrop raindrops + peeking Sun/Moon
+    tft.drawLine(centerX - 18, centerY + 18, centerX + 18, centerY - 18,
+                 0xF800);
+    tft.drawLine(centerX - 17, centerY + 18, centerX + 19, centerY - 18,
+                 0xF800);
+  } else if (condition.indexOf("rain") != -1 ||
+             condition.indexOf("drizzle") != -1 ||
+             condition.indexOf("shower") != -1) {
+    // Rainy Icon: Layered 3D clouds + detailed teardrop raindrops + peeking
+    // Sun/Moon
     if (isNight) {
       // Crescent Moon peeking from behind
       tft.fillCircle(centerX + 14, centerY - 12, 12, 0xFEA0); // Gold moon
@@ -441,13 +497,13 @@ void drawWeatherIcon(int centerX, int centerY, String condition, bool isNight) {
       tft.fillCircle(centerX + 12, centerY - 12, 14, 0xFD20); // Orange outer
       tft.fillCircle(centerX + 12, centerY - 12, 10, 0xFFE0); // Yellow inner
     }
-    
+
     // 3D Layered Cloud (Back dark shadow cloud + Front bright cloud)
     // Back cloud
     tft.fillCircle(centerX - 10, centerY - 4, 12, 0x3186);
     tft.fillCircle(centerX + 8, centerY - 4, 10, 0x3186);
     tft.fillRect(centerX - 10, centerY - 4, 18, 11, 0x3186);
-    
+
     // Front cloud body (Light slate/blue)
     tft.fillCircle(centerX - 14, centerY + 6, 12, 0xBDF7);
     tft.fillCircle(centerX + 14, centerY + 6, 10, 0xBDF7);
@@ -463,16 +519,20 @@ void drawWeatherIcon(int centerX, int centerY, String condition, bool isNight) {
     // High-Fidelity Teardrop Raindrops (Cyan)
     // Raindrop 1 (Left)
     tft.fillCircle(centerX - 12, centerY + 24, 2, 0x07FF);
-    tft.fillTriangle(centerX - 12, centerY + 20, centerX - 14, centerY + 24, centerX - 10, centerY + 24, 0x07FF);
+    tft.fillTriangle(centerX - 12, centerY + 20, centerX - 14, centerY + 24,
+                     centerX - 10, centerY + 24, 0x07FF);
     // Raindrop 2 (Center)
     tft.fillCircle(centerX, centerY + 26, 2, 0x07FF);
-    tft.fillTriangle(centerX, centerY + 22, centerX - 2, centerY + 26, centerX + 2, centerY + 26, 0x07FF);
+    tft.fillTriangle(centerX, centerY + 22, centerX - 2, centerY + 26,
+                     centerX + 2, centerY + 26, 0x07FF);
     // Raindrop 3 (Right)
     tft.fillCircle(centerX + 12, centerY + 24, 2, 0x07FF);
-    tft.fillTriangle(centerX + 12, centerY + 20, centerX + 10, centerY + 24, centerX + 14, centerY + 24, 0x07FF);
-  } 
-  else if (condition.indexOf("thunder") != -1 || condition.indexOf("storm") != -1) {
-    // Thunderstorm Icon: Very dark slate storm clouds + solid jagged lightning bolt
+    tft.fillTriangle(centerX + 12, centerY + 20, centerX + 10, centerY + 24,
+                     centerX + 14, centerY + 24, 0x07FF);
+  } else if (condition.indexOf("thunder") != -1 ||
+             condition.indexOf("storm") != -1) {
+    // Thunderstorm Icon: Very dark slate storm clouds + solid jagged lightning
+    // bolt
     tft.fillCircle(centerX - 10, centerY - 4, 12, 0x2104); // Dark purple-grey
     tft.fillCircle(centerX + 8, centerY - 4, 10, 0x2104);
     tft.fillRect(centerX - 10, centerY - 4, 18, 11, 0x2104);
@@ -481,36 +541,44 @@ void drawWeatherIcon(int centerX, int centerY, String condition, bool isNight) {
     tft.fillCircle(centerX + 2, centerY - 4, 16, 0x528A);
     tft.fillCircle(centerX + 14, centerY + 6, 10, 0x3186);
     tft.fillRect(centerX - 14, centerY + 6, 28, 11, 0x3186);
-    
+
     // Slanted rain lines
-    tft.drawLine(centerX - 10, centerY + 18, centerX - 13, centerY + 26, 0x07FF);
+    tft.drawLine(centerX - 10, centerY + 18, centerX - 13, centerY + 26,
+                 0x07FF);
     tft.drawLine(centerX + 10, centerY + 18, centerX + 7, centerY + 26, 0x07FF);
 
     // Thick Jagged Lightning Bolt (Glowing Yellow-Orange with White Core)
     // Outer glow
-    tft.fillTriangle(centerX + 5, centerY + 5, centerX - 9, centerY + 20, centerX + 1, centerY + 15, 0xFD20);
-    tft.fillTriangle(centerX - 5, centerY + 19, centerX + 7, centerY + 15, centerX - 9, centerY + 31, 0xFD20);
+    tft.fillTriangle(centerX + 5, centerY + 5, centerX - 9, centerY + 20,
+                     centerX + 1, centerY + 15, 0xFD20);
+    tft.fillTriangle(centerX - 5, centerY + 19, centerX + 7, centerY + 15,
+                     centerX - 9, centerY + 31, 0xFD20);
     // Inner body
-    tft.fillTriangle(centerX + 4, centerY + 6, centerX - 8, centerY + 20, centerX + 0, centerY + 16, 0xFFE0);
-    tft.fillTriangle(centerX - 4, centerY + 18, centerX + 6, centerY + 16, centerX - 8, centerY + 30, 0xFFE0);
+    tft.fillTriangle(centerX + 4, centerY + 6, centerX - 8, centerY + 20,
+                     centerX + 0, centerY + 16, 0xFFE0);
+    tft.fillTriangle(centerX - 4, centerY + 18, centerX + 6, centerY + 16,
+                     centerX - 8, centerY + 30, 0xFFE0);
     // Core white line
     tft.drawLine(centerX + 2, centerY + 9, centerX - 4, centerY + 18, 0xFFFF);
     tft.drawLine(centerX - 4, centerY + 18, centerX - 6, centerY + 26, 0xFFFF);
-  } 
-  else if (condition.indexOf("snow") != -1 || condition.indexOf("ice") != -1 || condition.indexOf("sleet") != -1 || condition.indexOf("hail") != -1) {
-    // Snowy Icon: Soft slate blue cloud + falling snowflakes (detailed asterisks)
+  } else if (condition.indexOf("snow") != -1 ||
+             condition.indexOf("ice") != -1 ||
+             condition.indexOf("sleet") != -1 ||
+             condition.indexOf("hail") != -1) {
+    // Snowy Icon: Soft slate blue cloud + falling snowflakes (detailed
+    // asterisks)
     tft.fillCircle(centerX - 14, centerY + 4, 12, 0xBDF7);
     tft.fillCircle(centerX + 2, centerY - 6, 16, 0xFFFF);
     tft.fillCircle(centerX + 14, centerY + 4, 10, 0xBDF7);
     tft.fillRect(centerX - 14, centerY + 4, 28, 11, 0xBDF7);
-    
+
     // Snowflake 1
     int s1x = centerX - 10, s1y = centerY + 18;
     tft.drawLine(s1x - 3, s1y, s1x + 3, s1y, 0xFFFF);
     tft.drawLine(s1x, s1y - 3, s1x, s1y + 3, 0xFFFF);
     tft.drawLine(s1x - 2, s1y - 2, s1x + 2, s1y + 2, 0xFFFF);
     tft.drawLine(s1x + 2, s1y - 2, s1x - 2, s1y + 2, 0xFFFF);
-    
+
     // Snowflake 2
     int s2x = centerX + 2, s2y = centerY + 24;
     tft.drawLine(s2x - 3, s2y, s2x + 3, s2y, 0xFFFF);
@@ -524,8 +592,11 @@ void drawWeatherIcon(int centerX, int centerY, String condition, bool isNight) {
     tft.drawLine(s3x, s3y - 3, s3x, s3y + 3, 0xFFFF);
     tft.drawLine(s3x - 2, s3y - 2, s3x + 2, s3y + 2, 0xFFFF);
     tft.drawLine(s3x + 2, s3y - 2, s3x - 2, s3y + 2, 0xFFFF);
-  } 
-  else if (condition.indexOf("cloud") != -1 || condition.indexOf("overcast") != -1 || condition.indexOf("mist") != -1 || condition.indexOf("fog") != -1 || condition.indexOf("haze") != -1) {
+  } else if (condition.indexOf("cloud") != -1 ||
+             condition.indexOf("overcast") != -1 ||
+             condition.indexOf("mist") != -1 ||
+             condition.indexOf("fog") != -1 ||
+             condition.indexOf("haze") != -1) {
     // Cloudy Icon: Layered 3D clouds
     // Back cloud (Dark greyish-blue)
     tft.fillCircle(centerX - 10, centerY - 6, 14, 0x3186);
@@ -536,77 +607,84 @@ void drawWeatherIcon(int centerX, int centerY, String condition, bool isNight) {
     tft.fillCircle(centerX - 14, centerY + 6, 12, 0xBDF7);
     tft.fillCircle(centerX + 14, centerY + 6, 10, 0xBDF7);
     tft.fillRect(centerX - 14, centerY + 6, 28, 11, 0xBDF7);
-    
+
     tft.fillCircle(centerX + 2, centerY - 4, 18, 0xFFFF);
     tft.fillRect(centerX - 14, centerY - 4, 32, 21, 0xFFFF);
-    
+
     // Bottom blending
     tft.fillCircle(centerX - 14, centerY + 6, 12, 0xBDF7);
     tft.fillCircle(centerX + 14, centerY + 6, 10, 0xBDF7);
     tft.fillRect(centerX - 14, centerY + 6, 28, 11, 0xBDF7);
-    
-    if (condition.indexOf("mist") != -1 || condition.indexOf("fog") != -1 || condition.indexOf("haze") != -1) {
+
+    if (condition.indexOf("mist") != -1 || condition.indexOf("fog") != -1 ||
+        condition.indexOf("haze") != -1) {
       tft.drawFastHLine(centerX - 22, centerY + 20, 44, 0xBDF7);
       tft.drawFastHLine(centerX - 14, centerY + 24, 28, 0xBDF7);
     }
-  } 
-  else {
+  } else {
     // Sunny or Moon (glowing light effects)
     if (isNight) {
       // Glow rings around Moon
-      tft.fillCircle(centerX - 3, centerY - 2, 22, 0x2104); // Outer soft glow ring
-      tft.fillCircle(centerX - 3, centerY - 2, 18, 0xFEA0); // Moon body (golden gold)
-      tft.fillCircle(centerX + 6, centerY - 5, 17, bg);     // Cut-out to make crescent moon
-      
+      tft.fillCircle(centerX - 3, centerY - 2, 22,
+                     0x2104); // Outer soft glow ring
+      tft.fillCircle(centerX - 3, centerY - 2, 18,
+                     0xFEA0); // Moon body (golden gold)
+      tft.fillCircle(centerX + 6, centerY - 5, 17,
+                     bg); // Cut-out to make crescent moon
+
       // Twinkling 4-point star 1 (White & Cyan)
       int sx = centerX + 12, sy = centerY + 10;
       tft.drawLine(sx, sy - 5, sx, sy + 5, 0x07FF);
       tft.drawLine(sx - 5, sy, sx + 5, sy, 0x07FF);
       tft.fillCircle(sx, sy, 2, 0xFFFF);
-      
+
       // Twinkling star 2 (Tiny white dot)
       tft.fillCircle(centerX - 14, centerY + 14, 1, 0xFFFF);
       // Twinkling star 3
       tft.fillCircle(centerX - 12, centerY - 14, 1, 0xFFFF);
     } else {
       // Glowing Radial Sun
-      tft.fillCircle(centerX, centerY, 24, 0x4100); // Very soft deep orange-red glow ring
+      tft.fillCircle(centerX, centerY, 24,
+                     0x4100); // Very soft deep orange-red glow ring
       tft.fillCircle(centerX, centerY, 20, 0x9180); // Mid orange glow ring
       tft.fillCircle(centerX, centerY, 15, 0xFD20); // Orange body
       tft.fillCircle(centerX, centerY, 11, 0xFFE0); // Yellow core
       tft.fillCircle(centerX, centerY, 6, 0xFFFF);  // Bright white center core!
-      
+
       // Sun rays (Beautiful thick lines)
       for (int angle = 0; angle < 360; angle += 45) {
-         float rad = angle * 0.0174532925f;
-         int x1 = centerX + 17 * cos(rad);
-         int y1 = centerY + 17 * sin(rad);
-         int x2 = centerX + 23 * cos(rad);
-         int y2 = centerY + 23 * sin(rad);
-         tft.drawLine(x1, y1, x2, y2, 0xFFE0);
+        float rad = angle * 0.0174532925f;
+        int x1 = centerX + 17 * cos(rad);
+        int y1 = centerY + 17 * sin(rad);
+        int x2 = centerX + 23 * cos(rad);
+        int y2 = centerY + 23 * sin(rad);
+        tft.drawLine(x1, y1, x2, y2, 0xFFE0);
       }
     }
   }
 }
 
 void drawTftDefaultScreen() {
-  if (tftWasPowerCycled) return;
+  if (tftWasPowerCycled)
+    return;
   currentTftState = TFT_IDLE;
   tft.fillScreen(0x0821); // Custom premium dark navy-blue background
 
   // 1. Draw Sleek Header Bar with Underline Glow
-  tft.fillRect(0, 0, 320, 48, 0x018C); // Premium Teal header bar background
+  tft.fillRect(0, 0, 320, 48, 0x018C);   // Premium Teal header bar background
   tft.drawFastHLine(0, 48, 320, 0x03EF); // Glowing teal bottom underline
-  drawAutoScaledString(deviceName.c_str(), 160, 24, 4, 1.0f, 300, TFT_WHITE, 0x018C, true);
+  drawAutoScaledString(deviceName.c_str(), 160, 24, 4, 1.0f, 300, TFT_WHITE,
+                       0x018C, true);
 
   // 2. Draw Top Card: Network Info (with Double Border Glow)
   // Shifted and expanded slightly: y = 55..165 (height 110)
   tft.fillRoundRect(15, 55, 290, 110, 8, 0x10A2); // Lighter navy card body
   tft.drawRoundRect(15, 55, 290, 110, 8, 0x028A); // Outer border
-  tft.drawRoundRect(16, 56, 288, 108, 8, 0x03EF);  // Inner glow border
-  
+  tft.drawRoundRect(16, 56, 288, 108, 8, 0x03EF); // Inner glow border
+
   // Section Header (Network)
-  drawAutoScaledString("NETWORK INFO", 160, 70, 2, 1.0f, 270, TFT_CYAN, 0x10A2, true);
+  drawAutoScaledString("NETWORK INFO", 160, 70, 2, 1.0f, 270, TFT_CYAN, 0x10A2,
+                       true);
   tft.drawFastHLine(25, 86, 270, 0x028A);
 
   // Network panel vertical separator
@@ -616,10 +694,11 @@ void drawTftDefaultScreen() {
   // Shifted and expanded: y = 175..410 (height 235)
   tft.fillRoundRect(15, 175, 290, 235, 8, 0x10A2); // Card body
   tft.drawRoundRect(15, 175, 290, 235, 8, 0x028A); // Outer border
-  tft.drawRoundRect(16, 176, 288, 233, 8, 0x03EF);  // Inner glow border
-  
+  tft.drawRoundRect(16, 176, 288, 233, 8, 0x03EF); // Inner glow border
+
   // Section Header (Time)
-  drawAutoScaledString("TIME & STATUS", 160, 190, 2, 1.0f, 240, TFT_CYAN, 0x10A2, true);
+  drawAutoScaledString("TIME & STATUS", 160, 190, 2, 1.0f, 240, TFT_CYAN,
+                       0x10A2, true);
   tft.drawFastHLine(25, 205, 270, 0x028A);
 
   // Draw mini analog clock icon at the header
@@ -631,7 +710,8 @@ void drawTftDefaultScreen() {
   // Shifted and resized: y = 420..470 (height 50)
   tft.fillRoundRect(15, 420, 290, 50, 6, 0x018C); // Teal banner body
   tft.drawRoundRect(15, 420, 290, 50, 6, 0x03EF); // Glow border
-  drawAutoScaledString("ATTENDANCE SYSTEM", 160, 445, 4, 1.0f, 300, TFT_WHITE, 0x018C, true);
+  drawAutoScaledString("ATTENDANCE SYSTEM", 160, 445, 4, 1.0f, 300, TFT_WHITE,
+                       0x018C, true);
 
   // Initial update of clock & network status
   tftForceClockRedraw = true;
@@ -643,28 +723,33 @@ void onBrandingUpdated() {
     drawTftDefaultScreen();
   }
 }
-void drawTftDirectionSelectionScreen(String name, String roll) {
-  if (tftWasPowerCycled) return;
+
+void drawTftDirectionSelectionScreen(String name, String roll) {
+  if (tftWasPowerCycled)
+    return;
   currentTftState = TFT_DIRECTION_SELECT;
   tft.fillScreen(TFT_BLACK);
-  
+
   // Outer frame
   tft.drawRoundRect(15, 15, 290, 450, 12, 0x03EF); // Teal border
   tft.drawRoundRect(16, 16, 288, 448, 12, 0x03EF);
-  
-  drawAutoScaledString("SELECT DIRECTION", 160, 40, 4, 1.3f, 280, TFT_WHITE, TFT_BLACK, true);
+
+  drawAutoScaledString("SELECT DIRECTION", 160, 40, 4, 1.3f, 280, TFT_WHITE,
+                       TFT_BLACK, true);
   tft.drawFastHLine(35, 62, 250, 0x2104); // Subtle divider
-  
+
   // Center Card for Employee Profile (Premium Glassmorphism Look)
-  uint16_t cardBg = 0x1082; // Deep charcoal
+  uint16_t cardBg = 0x1082;                        // Deep charcoal
   tft.fillRoundRect(35, 78, 250, 122, 10, cardBg); // Card Body
   tft.drawRoundRect(35, 78, 250, 122, 10, 0x2104); // Border
   tft.drawRoundRect(36, 79, 248, 120, 10, 0x03EF); // Glow
-  
+
   // Centered greeting, name & roll ID inside the card (Clean, no-photo version)
-  drawAutoScaledString("Welcome,", 160, 105, 4, 1.0f, 230, TFT_CYAN, cardBg, true);
+  drawAutoScaledString("Welcome,", 160, 105, 4, 1.0f, 230, TFT_CYAN, cardBg,
+                       true);
   drawAutoScaledString(name, 160, 138, 4, 1.0f, 230, TFT_WHITE, cardBg, true);
-  drawAutoScaledString("ID: " + roll, 160, 171, 4, 1.0f, 230, 0x07E0, cardBg, true);
+  drawAutoScaledString("ID: " + roll, 160, 171, 4, 1.0f, 230, 0x07E0, cardBg,
+                       true);
 
   // Draw "PUNCH IN" Button (drawn at y = 220..296)
   tft.fillRoundRect(43, 223, 240, 76, 12, 0x0102); // Dark shadow
@@ -672,17 +757,19 @@ void onBrandingUpdated() {
   tft.drawRoundRect(40, 220, 240, 76, 12, 0x07E0); // Neon green border
   // Custom design icon: arrow pointing right into bracket
   tft.drawRect(52, 246, 14, 24, TFT_WHITE);
-  tft.fillRect(49, 250, 5, 16, 0x03A4); // Open bracket opening
+  tft.fillRect(49, 250, 5, 16, 0x03A4);      // Open bracket opening
   tft.drawLine(47, 258, 61, 258, TFT_WHITE); // Arrow line
   tft.drawLine(56, 253, 61, 258, TFT_WHITE); // Arrow head
   tft.drawLine(56, 263, 61, 258, TFT_WHITE);
   // Text
-  drawAutoScaledString("PUNCH IN  >>", 175, 245, 4, 1.3f, 160, TFT_WHITE, 0x03A4, true);
-  drawAutoScaledString("(Start Shift)", 175, 275, 2, 1.0f, 160, 0x07E0, 0x03A4, true);
-  
+  drawAutoScaledString("PUNCH IN  >>", 175, 245, 4, 1.3f, 160, TFT_WHITE,
+                       0x03A4, true);
+  drawAutoScaledString("(Start Shift)", 175, 275, 2, 1.0f, 160, 0x07E0, 0x03A4,
+                       true);
+
   // Draw "PUNCH OUT" Button (drawn at y = 310..386)
-  tft.fillRoundRect(43, 313, 240, 76, 12, 0x0102); // Dark shadow
-  tft.fillRoundRect(40, 310, 240, 76, 12, 0x7800); // Rich Red/Maroon body
+  tft.fillRoundRect(43, 313, 240, 76, 12, 0x0102);  // Dark shadow
+  tft.fillRoundRect(40, 310, 240, 76, 12, 0x7800);  // Rich Red/Maroon body
   tft.drawRoundRect(40, 310, 240, 76, 12, TFT_RED); // Border
   // Custom design icon: arrow pointing left out of bracket
   tft.drawRect(52, 336, 14, 24, TFT_WHITE);
@@ -691,111 +778,132 @@ void onBrandingUpdated() {
   tft.drawLine(45, 348, 50, 343, TFT_WHITE); // Arrow head
   tft.drawLine(45, 348, 50, 353, TFT_WHITE);
   // Text
-  drawAutoScaledString("<<  PUNCH OUT", 175, 335, 4, 1.3f, 160, TFT_WHITE, 0x7800, true);
-  drawAutoScaledString("(End Shift)", 175, 365, 2, 1.0f, 160, TFT_RED, 0x7800, true);
-  
+  drawAutoScaledString("<<  PUNCH OUT", 175, 335, 4, 1.3f, 160, TFT_WHITE,
+                       0x7800, true);
+  drawAutoScaledString("(End Shift)", 175, 365, 2, 1.0f, 160, TFT_RED, 0x7800,
+                       true);
+
   // Cancel message at bottom
-  drawAutoScaledString("Tap outside or wait to cancel", 160, 425, 2, 1.5f, 270, TFT_YELLOW, TFT_BLACK, true);
+  drawAutoScaledString("Tap outside or wait to cancel", 160, 425, 2, 1.5f, 270,
+                       TFT_YELLOW, TFT_BLACK, true);
 }
 
 void drawTft2FAPromptScreen(String name, String roll) {
-  if (tftWasPowerCycled) return;
+  if (tftWasPowerCycled)
+    return;
   currentTftState = TFT_WAITING_2FA_FINGER;
   tft.fillScreen(TFT_BLACK);
-  
-  uint16_t cardBg = 0x1082; // Deep charcoal
+
+  uint16_t cardBg = 0x1082;      // Deep charcoal
   uint16_t accentColor = 0xFDC0; // Gold/Amber pending color
-  uint16_t infoColor = 0x5AEB; // High-tech active cyan-blue
-  
+  uint16_t infoColor = 0x5AEB;   // High-tech active cyan-blue
+
   // Outer frame
   tft.drawRoundRect(15, 15, 290, 450, 12, accentColor);
   tft.drawRoundRect(16, 16, 288, 448, 12, accentColor);
-  
+
   // Header
-  drawAutoScaledString("2-FACTOR AUTH", 160, 40, 4, 1.0f, 280, TFT_WHITE, TFT_BLACK, true);
+  drawAutoScaledString("2-FACTOR AUTH", 160, 40, 4, 1.0f, 280, TFT_WHITE,
+                       TFT_BLACK, true);
   tft.drawFastHLine(35, 62, 250, 0x2104); // Dark subtle divider
-  
+
   // Status message
-  drawAutoScaledString("CARD VERIFIED", 160, 95, 4, 1.0f, 240, 0x07E0, TFT_BLACK, true); // Neon green for success card read
-  
+  drawAutoScaledString("CARD VERIFIED", 160, 95, 4, 1.0f, 240, 0x07E0,
+                       TFT_BLACK, true); // Neon green for success card read
+
   // Employee Profile Card (Centered, clean)
-  tft.fillRoundRect(35, 125, 250, 122, 10, cardBg); // Card Body
-  tft.drawRoundRect(35, 125, 250, 122, 10, 0x2104); // Border
+  tft.fillRoundRect(35, 125, 250, 122, 10, cardBg);    // Card Body
+  tft.drawRoundRect(35, 125, 250, 122, 10, 0x2104);    // Border
   tft.drawRoundRect(36, 126, 248, 120, 10, infoColor); // Glow
-  
+
   // Centered greeting, name & roll ID inside the card (Clean, no-photo version)
-  drawAutoScaledString("Welcome,", 160, 152, 4, 1.0f, 230, TFT_CYAN, cardBg, true);
+  drawAutoScaledString("Welcome,", 160, 152, 4, 1.0f, 230, TFT_CYAN, cardBg,
+                       true);
   drawAutoScaledString(name, 160, 185, 4, 1.0f, 230, TFT_WHITE, cardBg, true);
-  drawAutoScaledString("ID: " + roll, 160, 218, 4, 1.0f, 230, 0x07E0, cardBg, true);
+  drawAutoScaledString("ID: " + roll, 160, 218, 4, 1.0f, 230, 0x07E0, cardBg,
+                       true);
 
   // Biometric Instruction Card
   tft.fillRoundRect(35, 265, 250, 140, 12, cardBg);
   tft.drawRoundRect(35, 265, 250, 140, 12, 0x2104);
   tft.drawRoundRect(36, 266, 248, 138, 12, accentColor);
-  
+
   // Action Text - Clean spacing and wording
-  drawAutoScaledString("SCAN BIOMETRIC", 160, 310, 4, 1.0f, 230, TFT_WHITE, cardBg, true);
-  drawAutoScaledString("Place finger on sensor to complete", 160, 355, 2, 1.0f, 230, accentColor, cardBg, true);
+  drawAutoScaledString("SCAN BIOMETRIC", 160, 310, 4, 1.0f, 230, TFT_WHITE,
+                       cardBg, true);
+  drawAutoScaledString("Place finger on sensor to complete", 160, 355, 2, 1.0f,
+                       230, accentColor, cardBg, true);
 
   // Timeout warning at the bottom
-  drawAutoScaledString("Timeout in 10s", 160, 438, 2, 1.0f, 270, TFT_RED, TFT_BLACK, true);
+  drawAutoScaledString("Timeout in 10s", 160, 438, 2, 1.0f, 270, TFT_RED,
+                       TFT_BLACK, true);
 }
 
-void drawTftEnrollScanningScreen(String type, int id, int step, String msg, bool forceRedraw) {
-  if (tftWasPowerCycled) return;
-  
+void drawTftEnrollScanningScreen(String type, int id, int step, String msg,
+                                 bool forceRedraw) {
+  if (tftWasPowerCycled)
+    return;
+
   static String lastMsg = "";
   static int lastStep = -1;
   static String lastType = "";
-  
+
   if (forceRedraw || currentTftState != TFT_ENROLL_SCANNING) {
     lastMsg = "";
     lastStep = -1;
     lastType = "";
   }
-  
+
   if (!forceRedraw && msg == lastMsg && step == lastStep && type == lastType) {
     return;
   }
-  
+
   lastMsg = msg;
   lastStep = step;
   lastType = type;
-  
+
   currentTftState = TFT_ENROLL_SCANNING;
   tft.fillScreen(TFT_BLACK);
-  
-  uint16_t cardBg = 0x1082; // Deep charcoal
+
+  uint16_t cardBg = 0x1082;      // Deep charcoal
   uint16_t accentColor = 0xFDC0; // Gold/Amber pending color
-  uint16_t infoColor = 0x5AEB; // High-tech active cyan-blue
-  
+  uint16_t infoColor = 0x5AEB;   // High-tech active cyan-blue
+
   // Outer frame
   tft.drawRoundRect(15, 15, 290, 450, 12, accentColor);
   tft.drawRoundRect(16, 16, 288, 448, 12, accentColor);
-  
+
   // Header
-  drawAutoScaledString("ENROLLING EMP", 160, 40, 4, 1.2f, 280, TFT_WHITE, TFT_BLACK, true);
+  drawAutoScaledString("ENROLLING EMP", 160, 40, 4, 1.2f, 280, TFT_WHITE,
+                       TFT_BLACK, true);
   tft.drawFastHLine(35, 62, 250, 0x2104); // Dark subtle divider
-  
+
   // Enrollment Mode Title
   String typeStr = (type == "FINGER") ? "FINGERPRINT" : "RFID CARD";
-  drawAutoScaledString(typeStr, 160, 95, 4, 1.2f, 240, infoColor, TFT_BLACK, true);
-  
+  drawAutoScaledString(typeStr, 160, 95, 4, 1.2f, 240, infoColor, TFT_BLACK,
+                       true);
+
   // Enrollment Details Card
-  tft.fillRoundRect(35, 125, 250, 122, 10, cardBg); // Card Body
-  tft.drawRoundRect(35, 125, 250, 122, 10, 0x2104); // Border
+  tft.fillRoundRect(35, 125, 250, 122, 10, cardBg);    // Card Body
+  tft.drawRoundRect(35, 125, 250, 122, 10, 0x2104);    // Border
   tft.drawRoundRect(36, 126, 248, 120, 10, infoColor); // Glow
-  
-  drawAutoScaledString("Status Details:", 160, 145, 2, 0.9f, 230, TFT_CYAN, cardBg, true);
+
+  drawAutoScaledString("Status Details:", 160, 145, 2, 0.9f, 230, TFT_CYAN,
+                       cardBg, true);
   if (type == "FINGER") {
-    drawAutoScaledString("Finger ID: " + String(id), 160, 175, 4, 1.1f, 230, TFT_WHITE, cardBg, true);
-    drawAutoScaledString("Scan Step: " + String(step) + " of 3", 160, 208, 4, 1.0f, 230, TFT_GREEN, cardBg, true);
+    drawAutoScaledString("Finger ID: " + String(id), 160, 175, 4, 1.1f, 230,
+                         TFT_WHITE, cardBg, true);
+    drawAutoScaledString("Scan Step: " + String(step) + " of 3", 160, 208, 4,
+                         1.0f, 230, TFT_GREEN, cardBg, true);
   } else {
-    drawAutoScaledString("Waiting for Card...", 160, 175, 4, 1.1f, 230, TFT_WHITE, cardBg, true);
+    drawAutoScaledString("Waiting for Card...", 160, 175, 4, 1.1f, 230,
+                         TFT_WHITE, cardBg, true);
     if (id != -1) {
-      drawAutoScaledString("Linking to FP: " + String(id), 160, 208, 4, 1.0f, 230, TFT_GREEN, cardBg, true);
+      drawAutoScaledString("Linking to FP: " + String(id), 160, 208, 4, 1.0f,
+                           230, TFT_GREEN, cardBg, true);
     } else {
-      drawAutoScaledString("New Card Scan", 160, 208, 4, 1.0f, 230, TFT_GREEN, cardBg, true);
+      drawAutoScaledString("New Card Scan", 160, 208, 4, 1.0f, 230, TFT_GREEN,
+                           cardBg, true);
     }
   }
 
@@ -803,72 +911,90 @@ void drawTftEnrollScanningScreen(String type, int id, int step, String msg, bool
   tft.fillRoundRect(35, 265, 250, 140, 12, cardBg);
   tft.drawRoundRect(35, 265, 250, 140, 12, 0x2104);
   tft.drawRoundRect(36, 266, 248, 138, 12, accentColor);
-  
-  drawAutoScaledString("INSTRUCTION", 160, 290, 4, 1.0f, 230, TFT_WHITE, cardBg, true);
+
+  drawAutoScaledString("INSTRUCTION", 160, 290, 4, 1.0f, 230, TFT_WHITE, cardBg,
+                       true);
   drawAutoScaledString(msg, 160, 335, 2, 1.0f, 230, accentColor, cardBg, true);
   if (type == "FINGER") {
     if (step == 1) {
-      drawAutoScaledString("Place finger on sensor", 160, 365, 2, 0.9f, 230, TFT_CYAN, cardBg, true);
+      drawAutoScaledString("Place finger on sensor", 160, 365, 2, 0.9f, 230,
+                           TFT_CYAN, cardBg, true);
     } else if (step == 2) {
-      drawAutoScaledString("Remove finger from sensor", 160, 365, 2, 0.9f, 230, TFT_CYAN, cardBg, true);
+      drawAutoScaledString("Remove finger from sensor", 160, 365, 2, 0.9f, 230,
+                           TFT_CYAN, cardBg, true);
     } else if (step == 3) {
-      drawAutoScaledString("Place same finger again", 160, 365, 2, 0.9f, 230, TFT_CYAN, cardBg, true);
+      drawAutoScaledString("Place same finger again", 160, 365, 2, 0.9f, 230,
+                           TFT_CYAN, cardBg, true);
     }
   } else {
-    drawAutoScaledString("Place card on reader", 160, 365, 2, 0.9f, 230, TFT_CYAN, cardBg, true);
+    drawAutoScaledString("Place card on reader", 160, 365, 2, 0.9f, 230,
+                         TFT_CYAN, cardBg, true);
   }
 
   // Cancel warning at the bottom
-  drawAutoScaledString("Cancel from browser dashboard", 160, 438, 2, 0.8f, 270, TFT_RED, TFT_BLACK, true);
+  drawAutoScaledString("Cancel from browser dashboard", 160, 438, 2, 0.8f, 270,
+                       TFT_RED, TFT_BLACK, true);
 }
 
-void drawTftEnrollConfirmedScreen(String name, String roll, String role, String type) {
-  if (tftWasPowerCycled) return;
+void drawTftEnrollConfirmedScreen(String name, String roll, String role,
+                                  String type) {
+  if (tftWasPowerCycled)
+    return;
   currentTftState = TFT_ENROLL_CONFIRMED;
   tft.fillScreen(TFT_BLACK);
-  
-  uint16_t cardBg = 0x1082; // Deep charcoal
+
+  uint16_t cardBg = 0x1082;      // Deep charcoal
   uint16_t accentColor = 0x07E0; // Neon success green
-  
-  tft.fillRoundRect(18, 18, 290, 450, 12, 0x0410); // Shadow
-  tft.fillRoundRect(15, 15, 290, 450, 12, cardBg); // Card Body
+
+  tft.fillRoundRect(18, 18, 290, 450, 12, 0x0410);      // Shadow
+  tft.fillRoundRect(15, 15, 290, 450, 12, cardBg);      // Card Body
   tft.drawRoundRect(15, 15, 290, 450, 12, accentColor); // Border
   tft.drawRoundRect(16, 16, 288, 448, 12, accentColor);
-  
-  drawAutoScaledString("CONFIRMED!", 160, 70, 4, 1.8f, 260, accentColor, cardBg, true);
+
+  drawAutoScaledString("CONFIRMED!", 160, 70, 4, 1.8f, 260, accentColor, cardBg,
+                       true);
   tft.drawFastHLine(35, 110, 250, 0x2104); // Elegant divider
-  
+
   // User Profile Name
-  drawAutoScaledString(name.c_str(), 160, 155, 4, 1.1f, 270, TFT_WHITE, cardBg, true);
+  drawAutoScaledString(name.c_str(), 160, 155, 4, 1.1f, 270, TFT_WHITE, cardBg,
+                       true);
   tft.drawFastHLine(40, 190, 240, 0x2104);
-  
+
   // Roll ID
-  drawAutoScaledString("EMPLOYEE ID", 160, 210, 2, 1.0f, 270, 0x05E5, cardBg, true);
-  drawAutoScaledString(roll.c_str(), 160, 235, 4, 1.1f, 270, TFT_WHITE, cardBg, true);
+  drawAutoScaledString("EMPLOYEE ID", 160, 210, 2, 1.0f, 270, 0x05E5, cardBg,
+                       true);
+  drawAutoScaledString(roll.c_str(), 160, 235, 4, 1.1f, 270, TFT_WHITE, cardBg,
+                       true);
   tft.drawFastHLine(40, 270, 240, 0x2104);
-  
+
   // Designation / Role
-  drawAutoScaledString("DESIGNATION", 160, 290, 2, 1.0f, 270, 0x05E5, cardBg, true);
-  drawAutoScaledString(role.c_str(), 160, 315, 4, 1.0f, 270, TFT_WHITE, cardBg, true);
+  drawAutoScaledString("DESIGNATION", 160, 290, 2, 1.0f, 270, 0x05E5, cardBg,
+                       true);
+  drawAutoScaledString(role.c_str(), 160, 315, 4, 1.0f, 270, TFT_WHITE, cardBg,
+                       true);
   tft.drawFastHLine(40, 350, 240, 0x2104);
-  
+
   // Type of registration
-  drawAutoScaledString("CREDENTIAL TYPE", 160, 370, 2, 1.0f, 270, 0x05E5, cardBg, true);
+  drawAutoScaledString("CREDENTIAL TYPE", 160, 370, 2, 1.0f, 270, 0x05E5,
+                       cardBg, true);
   String credType = (type == "FINGER") ? "Fingerprint" : "RFID Card";
-  drawAutoScaledString(credType.c_str(), 160, 395, 4, 1.0f, 270, TFT_CYAN, cardBg, true);
+  drawAutoScaledString(credType.c_str(), 160, 395, 4, 1.0f, 270, TFT_CYAN,
+                       cardBg, true);
   tft.drawFastHLine(40, 430, 240, 0x2104);
 }
 
-// Helper function to shorten and clean up long weather condition descriptions from wttr.in
+// Helper function to shorten and clean up long weather condition descriptions
+// from wttr.in
 String shortenWeatherCond(String cond) {
   cond.trim();
   String lower = cond;
   lower.toLowerCase();
-  
+
   if (lower.indexOf("thunder") != -1 || lower.indexOf("storm") != -1) {
     return "Thunderstorm";
   }
-  if (lower.indexOf("heavy rain") != -1 || lower.indexOf("moderate or heavy") != -1) {
+  if (lower.indexOf("heavy rain") != -1 ||
+      lower.indexOf("moderate or heavy") != -1) {
     return "Heavy Rain";
   }
   if (lower.indexOf("light rain") != -1 || lower.indexOf("patchy rain") != -1) {
@@ -880,7 +1006,8 @@ String shortenWeatherCond(String cond) {
   if (lower.indexOf("drizzle") != -1) {
     return "Drizzle";
   }
-  if (lower.indexOf("snow") != -1 || lower.indexOf("sleet") != -1 || lower.indexOf("hail") != -1) {
+  if (lower.indexOf("snow") != -1 || lower.indexOf("sleet") != -1 ||
+      lower.indexOf("hail") != -1) {
     return "Snowy";
   }
   if (lower.indexOf("partly cloudy") != -1) {
@@ -892,14 +1019,16 @@ String shortenWeatherCond(String cond) {
   if (lower.indexOf("cloud") != -1) {
     return "Cloudy";
   }
-  if (lower.indexOf("mist") != -1 || lower.indexOf("fog") != -1 || lower.indexOf("haze") != -1) {
+  if (lower.indexOf("mist") != -1 || lower.indexOf("fog") != -1 ||
+      lower.indexOf("haze") != -1) {
     return "Misty";
   }
   if (lower.indexOf("clear") != -1 || lower.indexOf("sunny") != -1) {
     return "Clear";
   }
-  
-  // If nothing matches, return original trimmed string, truncated to 16 chars if too long
+
+  // If nothing matches, return original trimmed string, truncated to 16 chars
+  // if too long
   if (cond.length() > 16) {
     return cond.substring(0, 14) + "..";
   }
@@ -907,7 +1036,8 @@ String shortenWeatherCond(String cond) {
 }
 
 void updateTftClock() {
-  if (tftWasPowerCycled) return;
+  if (tftWasPowerCycled)
+    return;
   extern bool isAPMode;
   uint16_t bg = 0x10A2;
   tft.setTextDatum(MC_DATUM);
@@ -942,7 +1072,7 @@ void updateTftClock() {
   static String lastNetMode = "";
   static String lastIpStr = "";
   static uint16_t lastIpColor = 0;
-  
+
   if (tftForceClockRedraw) {
     lastNetMode = "";
     lastIpStr = "";
@@ -953,24 +1083,26 @@ void updateTftClock() {
     lastNetMode = netMode;
     lastIpStr = ipStr;
     lastIpColor = ipColor;
-    
+
     // Clear left side icon area and text area completely to prevent overlap
     tft.fillRect(20, 92, 78, 66, bg);
     tft.fillRect(102, 92, 198, 66, bg);
-    
+
     // Draw single, large network icon centered at x = 60, y = 125
     drawNetworkIcon(60, 125, ipColor, !ethConnected);
 
     if (isAPMode && !ethConnected && WiFi.status() != WL_CONNECTED) {
       // Draw three detailed lines for AP Hotspot configuration
-      drawCardLineLeft("AP: Anurag_0.1_AP", 104, 102, 2, 1.2f, TFT_WHITE, bg, 16);
+      drawCardLineLeft("AP: Anurag_0.1_AP", 104, 102, 2, 1.2f, TFT_WHITE, bg,
+                       16);
       drawCardLineLeft("Pass: admin123", 104, 124, 2, 1.2f, TFT_WHITE, bg, 16);
       drawCardLineLeft("IP: 192.168.4.1", 104, 146, 2, 1.2f, ipColor, bg, 16);
     } else {
       // Draw three balanced lines for connected mode
       if (ethConnected) {
         drawCardLineLeft(netMode, 104, 102, 2, 1.2f, TFT_WHITE, bg, 16);
-        drawCardLineLeft("SSID: Ethernet", 104, 124, 2, 1.2f, TFT_WHITE, bg, 16);
+        drawCardLineLeft("SSID: Ethernet", 104, 124, 2, 1.2f, TFT_WHITE, bg,
+                         16);
         drawCardLineLeft(ipStr, 104, 146, 2, 1.2f, ipColor, bg, 16);
       } else {
         String ssidStr = "SSID: " + WiFi.SSID();
@@ -996,10 +1128,11 @@ void updateTftClock() {
   bool gotTime = getLocalTime(&ti, 50);
 
   int hour12 = 12;
-  const char* ampm = "AM";
+  const char *ampm = "AM";
   if (gotTime) {
     hour12 = ti.tm_hour % 12;
-    if (hour12 == 0) hour12 = 12;
+    if (hour12 == 0)
+      hour12 = 12;
     ampm = (ti.tm_hour >= 12) ? "PM" : "AM";
     sprintf(timeBuf, "%02d:%02d:%02d", hour12, ti.tm_min, ti.tm_sec);
     strftime(dateBuf, sizeof(dateBuf), "%d-%m-%Y", &ti);
@@ -1018,7 +1151,8 @@ void updateTftClock() {
   int totalW = timeW + 8 + ampmW;
   int startX = 160 - (totalW / 2);
 
-  // Clear only the left and right margins outside the text bounds to prevent flickering
+  // Clear only the left and right margins outside the text bounds to prevent
+  // flickering
   tft.fillRect(20, 208, startX - 20, 60, bg);
   tft.fillRect(startX + totalW, 208, 300 - (startX + totalW), 60, bg);
 
@@ -1061,8 +1195,9 @@ void updateTftClock() {
 
   if (lastDrawnDate != String(dateBuf)) {
     lastDrawnDate = String(dateBuf);
-    drawCardLineLeft("DATE: " + lastDrawnDate, 110, 275, 2, 1.3f, TFT_WHITE, bg, 16);
-    
+    drawCardLineLeft("DATE: " + lastDrawnDate, 110, 275, 2, 1.3f, TFT_WHITE, bg,
+                     16);
+
     // Clear and draw Calendar Icon (28x28 centered at 60, 275)
     tft.fillRect(45, 260, 30, 30, bg);
     drawCalendarIcon(60, 275, TFT_WHITE);
@@ -1077,7 +1212,8 @@ void updateTftClock() {
     tempVal = outsideTemp;
   } else {
     float tempC = temperatureRead();
-    if (isnan(tempC)) tempC = 0.0;
+    if (isnan(tempC))
+      tempC = 0.0;
     tempStr = String(tempC, 1) + " C (Int)";
     tempVal = tempC;
   }
@@ -1085,7 +1221,7 @@ void updateTftClock() {
   if (lastDrawnTemp != tempStr) {
     lastDrawnTemp = tempStr;
     drawCardLineLeft(tempStr, 110, 312, 4, 1.4f, TFT_YELLOW, bg, 26);
-    
+
     // Clear and draw Temperature Icon (24x36 centered at 60, 312)
     tft.fillRect(45, 292, 30, 40, bg);
     drawTempIcon(60, 312, TFT_WHITE, tempVal, bg);
@@ -1147,38 +1283,42 @@ void updateTftClock() {
   }
 }
 
-void drawProfilePhoto(String roll, int x, int y, int w, int h, uint16_t bgColor) {
-  if (tftWasPowerCycled) return;
+void drawProfilePhoto(String roll, int x, int y, int w, int h,
+                      uint16_t bgColor) {
+  if (tftWasPowerCycled)
+    return;
   // Clear area with card background color
   tft.fillRect(x, y, w, h, bgColor);
-  
+
   String jpgPath = "/photos/" + roll + ".jpg";
   bool imageDrawn = false;
-  
+
   if (LittleFS.exists(jpgPath)) {
     float scale = 1.0f;
     if (w <= 64) {
       scale = 0.5f; // Decode at 1/2 size natively for 120x120 -> 60x60
     }
     // drawJpgFile returns true on success
-    if (tft.drawJpgFile(LittleFS, jpgPath.c_str(), x, y, w, h, 0, 0, scale, scale)) {
+    if (tft.drawJpgFile(LittleFS, jpgPath.c_str(), x, y, w, h, 0, 0, scale,
+                        scale)) {
       imageDrawn = true;
     }
   }
-  
+
   // Draw double borders around the profile picture slot
   tft.drawRoundRect(x - 2, y - 2, w + 4, h + 4, 6, TFT_WHITE);
   tft.drawRoundRect(x - 1, y - 1, w + 2, h + 2, 5, TFT_WHITE);
-  
+
   if (!imageDrawn) {
-    // Draw the high-quality futuristic fallback profile avatar scaled to the box size
+    // Draw the high-quality futuristic fallback profile avatar scaled to the
+    // box size
     int cx = x + w / 2;
     int cy = y + h / 2;
     int headRadius = w / 8 + 4; // Scales head based on width
     int headY = cy - h / 12;    // Scales head position vertically
     tft.fillCircle(cx, headY, headRadius, 0x05E5);
     tft.drawCircle(cx, headY, headRadius, TFT_WHITE);
-    
+
     int shoulderRx = w / 5 + 4; // Scales shoulder width
     int shoulderRy = h / 11;    // Scales shoulder thickness
     int shoulderY = cy + h / 5; // Scales shoulder position vertically
@@ -1187,16 +1327,18 @@ void drawProfilePhoto(String roll, int x, int y, int w, int h, uint16_t bgColor)
   }
 }
 
-void drawTftSuccessScreen(String name, String dir, String status, String time, String roll) {
-  if (tftWasPowerCycled) return;
+void drawTftSuccessScreen(String name, String dir, String status, String time,
+                          String roll) {
+  if (tftWasPowerCycled)
+    return;
   // Pure Black background
   tft.fillScreen(TFT_BLACK);
 
   // Card background: deep charcoal/slate (0x1082)
   uint16_t cardBg = 0x1082;
   uint16_t accentColor = 0x07E0; // Neon success green
-  
-  tft.fillRoundRect(15, 15, 290, 450, 12, cardBg); // Card Body
+
+  tft.fillRoundRect(15, 15, 290, 450, 12, cardBg);      // Card Body
   tft.drawRoundRect(15, 15, 290, 450, 12, accentColor); // Border
   tft.drawRoundRect(16, 16, 288, 448, 12, accentColor);
 
@@ -1207,21 +1349,26 @@ void drawTftSuccessScreen(String name, String dir, String status, String time, S
     headerText = "GOOD BYE";
   }
   // Premium bold centered header (scale 2)
-  drawAutoScaledString(headerText, 160, 70, 4, 2.0f, 260, accentColor, cardBg, true);
+  drawAutoScaledString(headerText, 160, 70, 4, 2.0f, 260, accentColor, cardBg,
+                       true);
   tft.drawFastHLine(35, 110, 250, 0x2104); // Elegant divider
 
   // User Name
-  drawAutoScaledString(name.c_str(), 160, 155, 4, 1.0f, 270, TFT_WHITE, cardBg, true);
+  drawAutoScaledString(name.c_str(), 160, 155, 4, 1.0f, 270, TFT_WHITE, cardBg,
+                       true);
   tft.drawFastHLine(40, 190, 240, 0x2104);
 
   // Direction: IN / OUT
-  drawAutoScaledString("DIRECTION", 160, 210, 2, 1.0f, 270, 0x05E5, cardBg, true);
-  drawAutoScaledString(dir.c_str(), 160, 235, 4, 1.0f, 270, TFT_WHITE, cardBg, true);
+  drawAutoScaledString("DIRECTION", 160, 210, 2, 1.0f, 270, 0x05E5, cardBg,
+                       true);
+  drawAutoScaledString(dir.c_str(), 160, 235, 4, 1.0f, 270, TFT_WHITE, cardBg,
+                       true);
   tft.drawFastHLine(40, 270, 240, 0x2104);
 
   // Time details
   drawAutoScaledString("TIME", 160, 290, 2, 1.0f, 270, 0x05E5, cardBg, true);
-  drawAutoScaledString(time.c_str(), 160, 315, 4, 1.0f, 270, TFT_WHITE, cardBg, true);
+  drawAutoScaledString(time.c_str(), 160, 315, 4, 1.0f, 270, TFT_WHITE, cardBg,
+                       true);
   tft.drawFastHLine(40, 350, 240, 0x2104);
 
   // Status (Late / On-Time)
@@ -1230,39 +1377,47 @@ void drawTftSuccessScreen(String name, String dir, String status, String time, S
     statusColor = TFT_ORANGE;
   }
   drawAutoScaledString("STATUS", 160, 370, 2, 1.0f, 270, 0x05E5, cardBg, true);
-  drawAutoScaledString(status.c_str(), 160, 395, 4, 1.0f, 270, statusColor, cardBg, true);
+  drawAutoScaledString(status.c_str(), 160, 395, 4, 1.0f, 270, statusColor,
+                       cardBg, true);
   tft.drawFastHLine(40, 430, 240, 0x2104);
 }
 
 void drawTftDeniedScreen(String name, String reason) {
-  if (tftWasPowerCycled) return;
+  if (tftWasPowerCycled)
+    return;
   // OLED Pure Black background
   tft.fillScreen(TFT_BLACK);
 
   // Card background: deep charcoal/slate (0x1082)
   uint16_t cardBg = 0x1082;
   uint16_t accentColor = 0xF800; // Neon red
-  
-  tft.fillRoundRect(15, 15, 290, 450, 12, cardBg); // Card Body
+
+  tft.fillRoundRect(15, 15, 290, 450, 12, cardBg);      // Card Body
   tft.drawRoundRect(15, 15, 290, 450, 12, accentColor); // Border
   tft.drawRoundRect(16, 16, 288, 448, 12, accentColor);
 
   // Premium bold centered header (scale 2)
-  drawAutoScaledString("ACCESS DENIED", 160, 70, 4, 2.0f, 260, accentColor, cardBg, true);
+  drawAutoScaledString("ACCESS DENIED", 160, 70, 4, 2.0f, 260, accentColor,
+                       cardBg, true);
   tft.drawFastHLine(35, 110, 250, 0x2104); // Elegant divider
 
   // User Name
-  drawAutoScaledString(name.c_str(), 160, 155, 4, 1.0f, 270, TFT_WHITE, cardBg, true);
+  drawAutoScaledString(name.c_str(), 160, 155, 4, 1.0f, 270, TFT_WHITE, cardBg,
+                       true);
   tft.drawFastHLine(40, 190, 240, 0x2104);
 
   // Reason
-  drawAutoScaledString("REASON", 160, 220, 2, 1.0f, 270, TFT_YELLOW, cardBg, true);
-  drawAutoScaledString(reason.c_str(), 160, 250, 4, 1.0f, 270, TFT_WHITE, cardBg, true);
+  drawAutoScaledString("REASON", 160, 220, 2, 1.0f, 270, TFT_YELLOW, cardBg,
+                       true);
+  drawAutoScaledString(reason.c_str(), 160, 250, 4, 1.0f, 270, TFT_WHITE,
+                       cardBg, true);
   tft.drawFastHLine(40, 290, 240, 0x2104);
 
   // Action message
-  drawAutoScaledString("ACTION REQUIRED", 160, 330, 2, 1.0f, 270, TFT_YELLOW, cardBg, true);
-  drawAutoScaledString("PLEASE TRY AGAIN", 160, 365, 4, 1.0f, 270, accentColor, cardBg, true);
+  drawAutoScaledString("ACTION REQUIRED", 160, 330, 2, 1.0f, 270, TFT_YELLOW,
+                       cardBg, true);
+  drawAutoScaledString("PLEASE TRY AGAIN", 160, 365, 4, 1.0f, 270, accentColor,
+                       cardBg, true);
   tft.drawFastHLine(40, 410, 240, 0x2104);
 }
 
@@ -1438,32 +1593,35 @@ void loadFpCache() {
 void syncFingerprintDatabase() {
   Serial.println("Syncing fingerprint database with local storage...");
   int loadedCount = 0;
-  
+
   // Set all to false first
   for (int i = 1; i <= MAX_FP; i++) {
     fpUsed[i] = false;
   }
 
   // We only load models for profiles that actually exist in LittleFS.
-  // This avoids scanning the entire 200 slots on the sensor and deleting orphans,
-  // which causes brownouts/resets due to high write power consumption.
+  // This avoids scanning the entire 200 slots on the sensor and deleting
+  // orphans, which causes brownouts/resets due to high write power consumption.
   for (int i = 1; i <= MAX_FP; i++) {
     esp_task_wdt_reset(); // Pet the watchdog during sync
     String filename = "/" + String(i) + "_f.txt";
-    
+
     if (LittleFS.exists(filename)) {
       uint8_t result = finger.loadModel(i);
       if (result == FINGERPRINT_OK) {
         fpUsed[i] = true;
         loadedCount++;
       } else {
-        Serial.printf("⚠ Profile for ID %d exists in storage, but template is missing on sensor!\n", i);
+        Serial.printf("⚠ Profile for ID %d exists in storage, but template is "
+                      "missing on sensor!\n",
+                      i);
       }
     }
     // Small delay to yield to scheduler
     delay(5);
   }
-  Serial.printf("✓ Fingerprint database synced. Active templates: %d\n", loadedCount);
+  Serial.printf("✓ Fingerprint database synced. Active templates: %d\n",
+                loadedCount);
 }
 
 // --- Helper Functions (UNCHANGED) ---
@@ -1515,7 +1673,8 @@ void controlOnboardLed(bool on, uint8_t r = 0, uint8_t g = 0, uint8_t b = 64) {
 #endif
 }
 
-// Non-blocking task to beep the buzzer 3 times on denied access (crisp 80ms beeps)
+// Non-blocking task to beep the buzzer 3 times on denied access (crisp 80ms
+// beeps)
 void triggerDeniedBuzzer() {
   xTaskCreate(
       [](void *p) {
@@ -1576,52 +1735,59 @@ void triggerDeniedLed() {
 }
 
 // Helper function to extract a float/numeric value from JSON key
-float extractJsonFloat(const String& json, const String& key, int startPos = 0) {
+float extractJsonFloat(const String &json, const String &key,
+                       int startPos = 0) {
   int keyIndex = json.indexOf("\"" + key + "\"", startPos);
-  if (keyIndex == -1) return -999.0;
-  
+  if (keyIndex == -1)
+    return -999.0;
+
   int colonIndex = json.indexOf(':', keyIndex);
-  if (colonIndex == -1) return -999.0;
-  
+  if (colonIndex == -1)
+    return -999.0;
+
   // Find where the value starts (skip spaces)
   int startIdx = colonIndex + 1;
-  while (startIdx < json.length() && (json.charAt(startIdx) == ' ' || json.charAt(startIdx) == '\r' || json.charAt(startIdx) == '\n')) {
+  while (startIdx < json.length() &&
+         (json.charAt(startIdx) == ' ' || json.charAt(startIdx) == '\r' ||
+          json.charAt(startIdx) == '\n')) {
     startIdx++;
   }
-  
+
   // Find where the value ends
   int endIdx = startIdx;
-  while (endIdx < json.length() && 
-         json.charAt(endIdx) != ',' && 
-         json.charAt(endIdx) != '}' && 
-         json.charAt(endIdx) != ']' && 
-         json.charAt(endIdx) != ' ' && 
-         json.charAt(endIdx) != '\r' && 
+  while (endIdx < json.length() && json.charAt(endIdx) != ',' &&
+         json.charAt(endIdx) != '}' && json.charAt(endIdx) != ']' &&
+         json.charAt(endIdx) != ' ' && json.charAt(endIdx) != '\r' &&
          json.charAt(endIdx) != '\n') {
     endIdx++;
   }
-  
+
   String valStr = json.substring(startIdx, endIdx);
   valStr.trim();
   return valStr.toFloat();
 }
 
 // Helper function to extract a string value from JSON key
-String extractJsonString(const String& json, const String& key, int startPos = 0) {
+String extractJsonString(const String &json, const String &key,
+                         int startPos = 0) {
   int keyIndex = json.indexOf("\"" + key + "\"", startPos);
-  if (keyIndex == -1) return "";
-  
+  if (keyIndex == -1)
+    return "";
+
   int colonIndex = json.indexOf(':', keyIndex);
-  if (colonIndex == -1) return "";
-  
+  if (colonIndex == -1)
+    return "";
+
   // Find the opening quote of the string value
   int quoteStart = json.indexOf('"', colonIndex + 1);
-  if (quoteStart == -1) return "";
-  
+  if (quoteStart == -1)
+    return "";
+
   // Find the closing quote
   int quoteEnd = json.indexOf('"', quoteStart + 1);
-  if (quoteEnd == -1) return "";
-  
+  if (quoteEnd == -1)
+    return "";
+
   return json.substring(quoteStart + 1, quoteEnd);
 }
 
@@ -1636,7 +1802,8 @@ void weatherTask(void *p) {
     bool netConnected = false;
 #if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
     bool ethActive = (ETH.handle() != NULL);
-    netConnected = (ethActive && ETH.linkUp()) || (WiFi.status() == WL_CONNECTED);
+    netConnected =
+        (ethActive && ETH.linkUp()) || (WiFi.status() == WL_CONNECTED);
 #else
     netConnected = (ETH.localIP() != IPAddress(0, 0, 0, 0)) ||
                    (WiFi.status() == WL_CONNECTED);
@@ -1658,10 +1825,12 @@ void weatherTask(void *p) {
         secureClient.setInsecure(); // Skip certificate verification
 
         HTTPClient http;
-        String geocodeUrl = "https://maps.googleapis.com/maps/api/geocode/json?address=" + searchCity + "&key=" + googleApiKey;
+        String geocodeUrl =
+            "https://maps.googleapis.com/maps/api/geocode/json?address=" +
+            searchCity + "&key=" + googleApiKey;
         Serial.print("🌡️ Google Weather: Geocoding city: ");
         Serial.println(weatherCity);
-        
+
         http.begin(secureClient, geocodeUrl);
         http.setTimeout(8000); // 8 seconds timeout
         int httpCode = http.GET();
@@ -1675,19 +1844,25 @@ void weatherTask(void *p) {
               lat = parsedLat;
               lon = parsedLon;
               geocodeOk = true;
-              Serial.printf("🌡️ Google Weather: Geocoding success: Lat %.5f, Lon %.5f\n", lat, lon);
+              Serial.printf(
+                  "🌡️ Google Weather: Geocoding success: Lat %.5f, Lon %.5f\n",
+                  lat, lon);
             }
           }
         }
         if (!geocodeOk) {
-          Serial.println("⚠ Google Weather: Geocoding failed or coordinates missing. Using default Navi-Mumbai.");
+          Serial.println("⚠ Google Weather: Geocoding failed or coordinates "
+                         "missing. Using default Navi-Mumbai.");
         }
         http.end();
 
         // Fetch forecast from Google Weather API
-        String forecastUrl = "https://weather.googleapis.com/v1/currentConditions:lookup?location.latitude=" + String(lat, 5) + 
-                             "&location.longitude=" + String(lon, 5) + "&key=" + googleApiKey;
-        
+        String forecastUrl = "https://weather.googleapis.com/v1/"
+                             "currentConditions:lookup?location.latitude=" +
+                             String(lat, 5) +
+                             "&location.longitude=" + String(lon, 5) +
+                             "&key=" + googleApiKey;
+
         Serial.print("🌡️ Google Weather: Fetching conditions for Lat: ");
         Serial.print(lat, 4);
         Serial.print(", Lon: ");
@@ -1696,24 +1871,24 @@ void weatherTask(void *p) {
         http.begin(secureClient, forecastUrl);
         http.setTimeout(8000); // 8 seconds timeout
         httpCode = http.GET();
-        
+
         if (httpCode == 200) {
           String resp = http.getString();
-          
+
           int tempBlock = resp.indexOf("\"temperature\"");
           float temp = extractJsonFloat(resp, "degrees", tempBlock);
-          
+
           float hum = extractJsonFloat(resp, "relativeHumidity");
-          
+
           int windBlock = resp.indexOf("\"wind\"");
           float wind = extractJsonFloat(resp, "value", windBlock);
-          
+
           int descBlock = resp.indexOf("\"description\"");
           String cond = "";
           if (descBlock != -1) {
             cond = extractJsonString(resp, "text", descBlock);
           }
-          
+
           if (temp != -999.0 && hum != -999.0 && wind != -999.0) {
             outsideTemp = temp;
             weatherHum = String((int)hum) + "%";
@@ -1723,9 +1898,11 @@ void weatherTask(void *p) {
             } else {
               weatherCond = "Clear";
             }
-            
-            Serial.printf("🌡️ Google Weather: Updated: %.1f C | Hum: %s | Wind: %s | Cond: %s\n",
-                          outsideTemp, weatherHum.c_str(), weatherWind.c_str(), weatherCond.c_str());
+
+            Serial.printf("🌡️ Google Weather: Updated: %.1f C | Hum: %s | "
+                          "Wind: %s | Cond: %s\n",
+                          outsideTemp, weatherHum.c_str(), weatherWind.c_str(),
+                          weatherCond.c_str());
 
             // Save to LittleFS
             File f = LittleFS.open("/last_weather.txt", FILE_WRITE);
@@ -1738,10 +1915,12 @@ void weatherTask(void *p) {
             }
             tftForceClockRedraw = true;
           } else {
-            Serial.println("❌ Google Weather: Parsing failed (some fields missing in JSON).");
+            Serial.println("❌ Google Weather: Parsing failed (some fields "
+                           "missing in JSON).");
           }
         } else {
-          Serial.printf("❌ Google Weather: HTTP lookup failed: %d\n", httpCode);
+          Serial.printf("❌ Google Weather: HTTP lookup failed: %d\n",
+                        httpCode);
         }
         http.end();
       } else {
@@ -1755,10 +1934,12 @@ void weatherTask(void *p) {
         searchCity.trim();
 
         HTTPClient http;
-        String geocodeUrl = "http://geocoding-api.open-meteo.com/v1/search?name=" + searchCity + "&count=1&language=en&format=json";
+        String geocodeUrl =
+            "http://geocoding-api.open-meteo.com/v1/search?name=" + searchCity +
+            "&count=1&language=en&format=json";
         Serial.print("🌡️ Weather Task (Open-Meteo): Geocoding city: ");
         Serial.println(weatherCity);
-        
+
         http.begin(geocodeUrl);
         http.setTimeout(8000); // 8 seconds timeout
         int httpCode = http.GET();
@@ -1770,21 +1951,29 @@ void weatherTask(void *p) {
             lat = parsedLat;
             lon = parsedLon;
             geocodeOk = true;
-            Serial.printf("🌡️ Weather Task (Open-Meteo): Geocoding success: Lat %.5f, Lon %.5f\n", lat, lon);
+            Serial.printf("🌡️ Weather Task (Open-Meteo): Geocoding success: "
+                          "Lat %.5f, Lon %.5f\n",
+                          lat, lon);
           } else {
-            Serial.println("⚠ Weather Task (Open-Meteo): Geocoding coordinates missing in JSON. Using default Navi-Mumbai.");
+            Serial.println("⚠ Weather Task (Open-Meteo): Geocoding coordinates "
+                           "missing in JSON. Using default Navi-Mumbai.");
           }
         } else {
-          Serial.printf("❌ Weather Task (Open-Meteo): Geocoding HTTP failed: %d. Using default Navi-Mumbai.\n", httpCode);
+          Serial.printf("❌ Weather Task (Open-Meteo): Geocoding HTTP failed: "
+                        "%d. Using default Navi-Mumbai.\n",
+                        httpCode);
         }
         http.end();
 
         // Now fetch forecast for lat/lon
-        String forecastUrl = "http://api.open-meteo.com/v1/forecast?latitude=" + String(lat, 5) + 
-                              "&longitude=" + String(lon, 5) + 
-                              "&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code";
-        
-        Serial.print("🌡️ Weather Task (Open-Meteo): Fetching forecast for Lat: ");
+        String forecastUrl =
+            "http://api.open-meteo.com/v1/forecast?latitude=" + String(lat, 5) +
+            "&longitude=" + String(lon, 5) +
+            "&current=temperature_2m,relative_humidity_2m,wind_speed_10m,"
+            "weather_code";
+
+        Serial.print(
+            "🌡️ Weather Task (Open-Meteo): Fetching forecast for Lat: ");
         Serial.print(lat, 4);
         Serial.print(", Lon: ");
         Serial.println(lon, 4);
@@ -1792,41 +1981,90 @@ void weatherTask(void *p) {
         http.begin(forecastUrl);
         http.setTimeout(8000); // 8 seconds timeout
         httpCode = http.GET();
-        
+
         if (httpCode == 200) {
           String resp = http.getString();
           int currentBlock = resp.indexOf("\"current\"");
-          if (currentBlock == -1) currentBlock = 0;
+          if (currentBlock == -1)
+            currentBlock = 0;
           float temp = extractJsonFloat(resp, "temperature_2m", currentBlock);
-          float hum = extractJsonFloat(resp, "relative_humidity_2m", currentBlock);
+          float hum =
+              extractJsonFloat(resp, "relative_humidity_2m", currentBlock);
           float wind = extractJsonFloat(resp, "wind_speed_10m", currentBlock);
           float wcode = extractJsonFloat(resp, "weather_code", currentBlock);
-          
-          if (temp != -999.0 && hum != -999.0 && wind != -999.0 && wcode != -999.0) {
+
+          if (temp != -999.0 && hum != -999.0 && wind != -999.0 &&
+              wcode != -999.0) {
             outsideTemp = temp;
             weatherHum = String((int)hum) + "%";
             weatherWind = String(wind, 1) + " km/h";
-            
+
             switch ((int)wcode) {
-              case 0: weatherCond = "Clear"; break;
-              case 1: case 2: weatherCond = "Partly Cloudy"; break;
-              case 3: weatherCond = "Overcast"; break;
-              case 45: case 48: weatherCond = "Foggy"; break;
-              case 51: case 53: case 55: weatherCond = "Drizzle"; break;
-              case 56: case 57: weatherCond = "Freezing Drizzle"; break;
-              case 61: case 63: weatherCond = "Light Rain"; break;
-              case 65: weatherCond = "Heavy Rain"; break;
-              case 66: case 67: weatherCond = "Freezing Rain"; break;
-              case 71: case 73: case 75: weatherCond = "Snowy"; break;
-              case 77: weatherCond = "Snow Grains"; break;
-              case 80: case 81: case 82: weatherCond = "Rainy"; break;
-              case 85: case 86: weatherCond = "Snow Showers"; break;
-              case 95: case 96: case 99: weatherCond = "Thunderstorm"; break;
-              default: weatherCond = "Clear"; break;
+            case 0:
+              weatherCond = "Clear";
+              break;
+            case 1:
+            case 2:
+              weatherCond = "Partly Cloudy";
+              break;
+            case 3:
+              weatherCond = "Overcast";
+              break;
+            case 45:
+            case 48:
+              weatherCond = "Foggy";
+              break;
+            case 51:
+            case 53:
+            case 55:
+              weatherCond = "Drizzle";
+              break;
+            case 56:
+            case 57:
+              weatherCond = "Freezing Drizzle";
+              break;
+            case 61:
+            case 63:
+              weatherCond = "Light Rain";
+              break;
+            case 65:
+              weatherCond = "Heavy Rain";
+              break;
+            case 66:
+            case 67:
+              weatherCond = "Freezing Rain";
+              break;
+            case 71:
+            case 73:
+            case 75:
+              weatherCond = "Snowy";
+              break;
+            case 77:
+              weatherCond = "Snow Grains";
+              break;
+            case 80:
+            case 81:
+            case 82:
+              weatherCond = "Rainy";
+              break;
+            case 85:
+            case 86:
+              weatherCond = "Snow Showers";
+              break;
+            case 95:
+            case 96:
+            case 99:
+              weatherCond = "Thunderstorm";
+              break;
+            default:
+              weatherCond = "Clear";
+              break;
             }
-            
-            Serial.printf("🌡️ Weather Task (Open-Meteo): Updated: %.1f C | Hum: %s | Wind: %s | Cond: %s\n",
-                          outsideTemp, weatherHum.c_str(), weatherWind.c_str(), weatherCond.c_str());
+
+            Serial.printf("🌡️ Weather Task (Open-Meteo): Updated: %.1f C | "
+                          "Hum: %s | Wind: %s | Cond: %s\n",
+                          outsideTemp, weatherHum.c_str(), weatherWind.c_str(),
+                          weatherCond.c_str());
 
             // Save to LittleFS
             File f = LittleFS.open("/last_weather.txt", FILE_WRITE);
@@ -1839,17 +2077,22 @@ void weatherTask(void *p) {
             }
             tftForceClockRedraw = true;
           } else {
-            Serial.println("❌ Weather Task (Open-Meteo): Parsing failed (some fields missing in JSON).");
+            Serial.println("❌ Weather Task (Open-Meteo): Parsing failed (some "
+                           "fields missing in JSON).");
           }
         } else {
-          Serial.printf("❌ Weather Task (Open-Meteo): Forecast HTTP failed: %d\n", httpCode);
+          Serial.printf(
+              "❌ Weather Task (Open-Meteo): Forecast HTTP failed: %d\n",
+              httpCode);
         }
         http.end();
       }
-      
-      ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(1800000)); // Sleep 30 mins or until notified
+
+      ulTaskNotifyTake(
+          pdTRUE, pdMS_TO_TICKS(1800000)); // Sleep 30 mins or until notified
     } else {
-      ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(10000)); // Sleep 10 seconds or until notified
+      ulTaskNotifyTake(
+          pdTRUE, pdMS_TO_TICKS(10000)); // Sleep 10 seconds or until notified
     }
   }
 }
@@ -2022,7 +2265,7 @@ void processAccess(String id, bool isFinger) {
     if (f) {
       c = f.readString();
       f.close();
-      
+
       int pipes[8];
       int pCount = 0;
       int lastPos = -1;
@@ -2072,21 +2315,23 @@ void processAccess(String id, bool isFinger) {
           pipes[i] = -1;
         }
       }
-      
-      String stateStr = (pCount >= 4) ? c.substring(pipes[2] + 1, pipes[3]) : "0";
-      String lastDate = (pCount >= 5) ? c.substring(pipes[3] + 1, pipes[4]) : "";
+
+      String stateStr =
+          (pCount >= 4) ? c.substring(pipes[2] + 1, pipes[3]) : "0";
+      String lastDate =
+          (pCount >= 5) ? c.substring(pipes[3] + 1, pipes[4]) : "";
       stateStr.trim();
       lastDate.trim();
-      
+
       String today = getTodayDate();
       String autoDir = "In";
-      
+
       if (lastDate == today) {
         autoDir = "Out";
       } else {
         autoDir = "In"; // First punch of the day
       }
-      
+
       savePunchRecord(id, isFinger, autoDir);
     }
   } else {
@@ -2096,7 +2341,8 @@ void processAccess(String id, bool isFinger) {
     lastScanUID = id;
     lastScanTime = millis();
     triggerDeniedLed();
-    ws.textAll("{\"type\":\"SCAN\",\"uid\":\"" + id + "\",\"status\":\"Denied\"}");
+    ws.textAll("{\"type\":\"SCAN\",\"uid\":\"" + id +
+               "\",\"status\":\"Denied\"}");
     currentTftState = TFT_PUNCH_DENIED;
     drawTftDeniedScreen("Not Enrolled", "ACCESS DENIED");
     tftMessageUntil = millis() + 1500;
@@ -2106,17 +2352,17 @@ void processAccess(String id, bool isFinger) {
 void savePunchRecord(String id, bool isFinger, String selectedDir) {
   String method = isFinger ? "Fingerprint" : "RFID Card";
   String filename = "/" + id + (isFinger ? "_f.txt" : ".txt");
-  
+
   struct tm ti;
   bool gotTime = getLocalTime(&ti, 100);
-  
+
   // Format current time "HH:MM:SS"
   char tBuf[12] = "00:00:00";
   if (gotTime) {
     strftime(tBuf, sizeof(tBuf), "%H:%M:%S", &ti);
   }
   String t = String(tBuf);
-  
+
   // Format today's date "DD-MM-YYYY"
   char dateBuf[16] = "00-00-0000";
   if (gotTime) {
@@ -2334,7 +2580,8 @@ void savePunchRecord(String id, bool isFinger, String selectedDir) {
   ws.textAll(wsData);
 
   if (accepted) {
-    extern void queueSqlSync(String id, String name, String role, String dir, String status, String type);
+    extern void queueSqlSync(String id, String name, String role, String dir,
+                             String status, String type);
     queueSqlSync(id, name, role, dir, punchStatus, method);
   }
 
@@ -2428,17 +2675,17 @@ void enableWatchdog() {
 
 bool checkW5500Link() {
   SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
-  
+
   pinMode(ETH_CS_PIN, OUTPUT);
   digitalWrite(ETH_CS_PIN, LOW);
-  
+
   SPI.transfer(0x00); // Address High (0x00)
   SPI.transfer(0x2E); // Address Low (0x2E)
   SPI.transfer(0x00); // Control Byte (Read, Block 0 (Common), Variable length)
   uint8_t phycfgr = SPI.transfer(0x00); // Read register data
-  
+
   digitalWrite(ETH_CS_PIN, HIGH);
-  
+
   SPI.endTransaction();
 
   Serial.printf("🔍 W5500 PHYCFGR read via SPI library: 0x%02X\n", phycfgr);
@@ -2451,26 +2698,31 @@ bool checkW5500Link() {
   return (phycfgr & 0x01) == 0x01;
 }
 
-// Helper function to draw premium vector network status screens (Ethernet/WiFi DHCP initialization)
-void drawNetworkInitScreen(const String& title, const String& subtitle, const String& details, uint16_t titleColor, uint16_t subtitleColor, bool showAnim = true, int animOffset = 0) {
-  if (tftWasPowerCycled) return;
+// Helper function to draw premium vector network status screens (Ethernet/WiFi
+// DHCP initialization)
+void drawNetworkInitScreen(const String &title, const String &subtitle,
+                           const String &details, uint16_t titleColor,
+                           uint16_t subtitleColor, bool showAnim = true,
+                           int animOffset = 0) {
+  if (tftWasPowerCycled)
+    return;
   uint16_t bg = 0x10A2;
-  
+
   if (currentTftState != TFT_BOOT) {
     tft.fillScreen(0x0821);
-    
+
     // Outer frame
     tft.drawRoundRect(10, 10, 300, 460, 12, 0x03EF);
-    
+
     // Center Card
     tft.fillRoundRect(28, 113, 264, 254, 8, 0x0410); // Shadow
     tft.fillRoundRect(25, 110, 264, 254, 8, bg);     // Body
     tft.drawRoundRect(25, 110, 264, 254, 8, 0x028A); // Border
     tft.drawRoundRect(26, 111, 262, 252, 8, 0x03EF); // Glow
-    
+
     currentTftState = TFT_BOOT;
   }
-  
+
   // Clear only the inside of the card (preventing full screen flickering)
   tft.fillRect(27, 112, 260, 250, bg);
 
@@ -2490,14 +2742,14 @@ void drawNetworkInitScreen(const String& title, const String& subtitle, const St
   }
 
   drawAutoScaledString(title, 160, 235, 4, 1.0f, 240, titleColor, bg, true);
-  drawAutoScaledString(subtitle, 160, 275, 2, 1.5f, 240, subtitleColor, bg, true);
+  drawAutoScaledString(subtitle, 160, 275, 2, 1.5f, 240, subtitleColor, bg,
+                       true);
   drawAutoScaledString(details, 160, 315, 2, 1.1f, 240, TFT_WHITE, bg, true);
 }
 
-
 void setup() {
-  // 1. Immediately drive all SPI CS pins HIGH to prevent floating state collisions
-  // and minimize signal-leakage power consumption on startup.
+  // 1. Immediately drive all SPI CS pins HIGH to prevent floating state
+  // collisions and minimize signal-leakage power consumption on startup.
   pinMode(TFT_CS, OUTPUT);
   digitalWrite(TFT_CS, HIGH);
   pinMode(T_CS, OUTPUT);
@@ -2507,39 +2759,64 @@ void setup() {
   pinMode(ETH_CS_PIN, OUTPUT);
   digitalWrite(ETH_CS_PIN, HIGH);
 
-  // 3. Keep the TFT backlight OFF initially to reduce boot current by ~100-150mA.
+  // 3. Keep the TFT backlight OFF initially to reduce boot current by
+  // ~100-150mA.
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, LOW);
 
-  // 4. Add a 1000ms startup delay to let the power supply voltage fully stabilize.
+  // 4. Add a 1000ms startup delay to let the power supply voltage fully
+  // stabilize.
   delay(1000);
 
   // 5. Perform clean hardware reset on TFT screen while voltage is stable
   pinMode(TFT_RST, OUTPUT);
-  digitalWrite(TFT_RST, LOW);   // Active low reset
+  digitalWrite(TFT_RST, LOW); // Active low reset
   delay(100);
-  digitalWrite(TFT_RST, HIGH);  // Release reset
+  digitalWrite(TFT_RST, HIGH); // Release reset
   delay(150);
 
   Serial.begin(115200);
-  
+
   esp_reset_reason_t reason = esp_reset_reason();
   Serial.print("\nℹ️ ESP32 Reset Reason: ");
   switch (reason) {
-    case ESP_RST_POWERON:   Serial.println("Power-on reset"); break;
-    case ESP_RST_EXT:       Serial.println("External pin reset (e.g. Reset Button)"); break;
-    case ESP_RST_SW:        Serial.println("Software reset (ESP.restart())"); break;
-    case ESP_RST_PANIC:     Serial.println("Panic / Crash reset"); break;
-    case ESP_RST_INT_WDT:   Serial.println("Interrupt Watchdog reset"); break;
-    case ESP_RST_TASK_WDT:  Serial.println("Task Watchdog reset"); break;
-    case ESP_RST_WDT:       Serial.println("Other Watchdog reset"); break;
-    case ESP_RST_DEEPSLEEP: Serial.println("Deep sleep wake-up"); break;
-    case ESP_RST_BROWNOUT:  Serial.println("Brownout reset (Voltage drop - check power supply!)"); break;
-    case ESP_RST_SDIO:      Serial.println("SDIO reset"); break;
-    default:                Serial.printf("Unknown reset reason (%d)\n", reason); break;
+  case ESP_RST_POWERON:
+    Serial.println("Power-on reset");
+    break;
+  case ESP_RST_EXT:
+    Serial.println("External pin reset (e.g. Reset Button)");
+    break;
+  case ESP_RST_SW:
+    Serial.println("Software reset (ESP.restart())");
+    break;
+  case ESP_RST_PANIC:
+    Serial.println("Panic / Crash reset");
+    break;
+  case ESP_RST_INT_WDT:
+    Serial.println("Interrupt Watchdog reset");
+    break;
+  case ESP_RST_TASK_WDT:
+    Serial.println("Task Watchdog reset");
+    break;
+  case ESP_RST_WDT:
+    Serial.println("Other Watchdog reset");
+    break;
+  case ESP_RST_DEEPSLEEP:
+    Serial.println("Deep sleep wake-up");
+    break;
+  case ESP_RST_BROWNOUT:
+    Serial.println("Brownout reset (Voltage drop - check power supply!)");
+    break;
+  case ESP_RST_SDIO:
+    Serial.println("SDIO reset");
+    break;
+  default:
+    Serial.printf("Unknown reset reason (%d)\n", reason);
+    break;
   }
 
-  disableWatchdog(); // Temporarily increase watchdog timeout during long setup/sync phase
+  disableWatchdog(); // Temporarily increase watchdog timeout during long
+                     // setup/sync phase
 
   // Initialize LCD Display & Shared I2C Bus
   Wire.begin(LCD_SDA_PIN, LCD_SCL_PIN);
@@ -2572,38 +2849,45 @@ void setup() {
   // Initialize standard Arduino SPI first so the SPI2_HOST bus driver is set up
   SPI.begin(12, 13, 11, -1);
 
-  // Initialize TFT Display which will attach itself to the existing SPI2_HOST bus
+  // Initialize TFT Display which will attach itself to the existing SPI2_HOST
+  // bus
   tft.init();
 
-  tft.setRotation(4); // Portrait Mirrored (use 4 or 6 for vertical depending on cable direction)
-  
-  // Display Premium Booting screen (Drawn with backlight still off to prevent white screen flash)
+  tft.setRotation(4); // Portrait Mirrored (use 4 or 6 for vertical depending on
+                      // cable direction)
+
+  // Display Premium Booting screen (Drawn with backlight still off to prevent
+  // white screen flash)
   tft.fillScreen(0x0821); // Custom premium dark navy-blue background
   tft.drawRoundRect(10, 10, 300, 460, 12, 0x03EF); // Outer frame glow
-  
+
   uint16_t bootBg = 0x10A2;
   tft.fillRoundRect(28, 113, 264, 254, 8, 0x0410); // Shadow
-  tft.fillRoundRect(25, 110, 264, 254, 8, bootBg);     // Body
+  tft.fillRoundRect(25, 110, 264, 254, 8, bootBg); // Body
   tft.drawRoundRect(25, 110, 264, 254, 8, 0x028A); // Border
   tft.drawRoundRect(26, 111, 262, 252, 8, 0x03EF); // Glow
-  
+
   // Loading graphic animation: Concentric rings and glowing dots
   tft.drawCircle(160, 175, 26, 0x028A);
   tft.drawCircle(160, 175, 20, 0x03EF);
   tft.fillCircle(160, 155, 4, TFT_WHITE); // Glowing top dot
   tft.fillCircle(160 + 17, 175 - 10, 2, TFT_CYAN);
   tft.fillCircle(160 + 17, 175 + 10, 2, TFT_CYAN);
-  
+
   // Booting texts
-  drawAutoScaledString("ATTENDANCE SYSTEM", 160, 235, 4, 1.0f, 240, TFT_WHITE, bootBg, true);
-  drawAutoScaledString("System Booting...", 160, 275, 2, 1.5f, 240, TFT_YELLOW, bootBg, true);
-  drawAutoScaledString("Initializing Hardware...", 160, 315, 2, 1.0f, 240, TFT_CYAN, bootBg, true);
+  drawAutoScaledString("ATTENDANCE SYSTEM", 160, 235, 4, 1.0f, 240, TFT_WHITE,
+                       bootBg, true);
+  drawAutoScaledString("System Booting...", 160, 275, 2, 1.5f, 240, TFT_YELLOW,
+                       bootBg, true);
+  drawAutoScaledString("Initializing Hardware...", 160, 315, 2, 1.0f, 240,
+                       TFT_CYAN, bootBg, true);
   tft.setTextSize(1.0f); // Reset
 
   // Turn on the TFT Backlight now that the initial screen has been fully drawn
   digitalWrite(TFT_BL, HIGH);
 
-  pinMode(T_IRQ, INPUT_PULLUP); // Configure Touch Interrupt pin as input with pull-up to monitor screen power status
+  pinMode(T_IRQ, INPUT_PULLUP); // Configure Touch Interrupt pin as input with
+                                // pull-up to monitor screen power status
   pinMode(LED_PIN, OUTPUT);
   pinMode(DENIED_LED_PIN, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
@@ -2619,10 +2903,10 @@ void setup() {
   neopixelWrite(RGB_BUILTIN, 0, 0, 0); // Turn off NeoPixel on startup
 #endif
 
-
   Serial.println("🔍 [DEBUG] Initializing MFRC522 RFID via Arduino SPI...");
   rfid.PCD_Init();
-  delay(50); // MFRC522 datasheet: 50ms required after soft-reset before first read
+  delay(50); // MFRC522 datasheet: 50ms required after soft-reset before first
+             // read
   Serial.println("🔍 [DEBUG] MFRC522 RFID Initialization completed!");
 
   // Register Network Event Handler for Ethernet and Wi-Fi using lambda to avoid
@@ -2678,7 +2962,6 @@ void setup() {
       break;
     }
   });
-
 
   // Initialize Fingerprint Serial Communication
   mySerial.begin(57600, SERIAL_8N1, FP_RX, FP_TX);
@@ -2784,7 +3067,10 @@ void setup() {
         twoFactorEnabled = false;
       }
       f.close();
-      Serial.printf("✓ Config loaded - Device: %s, TFT Prompt: %s, 2FA: %s\n", deviceName.c_str(), tftPromptEnabled ? "Enabled" : "Disabled", twoFactorEnabled ? "Enabled" : "Disabled");
+      Serial.printf("✓ Config loaded - Device: %s, TFT Prompt: %s, 2FA: %s\n",
+                    deviceName.c_str(),
+                    tftPromptEnabled ? "Enabled" : "Disabled",
+                    twoFactorEnabled ? "Enabled" : "Disabled");
     }
   }
 
@@ -2805,7 +3091,10 @@ void setup() {
     if (f) {
       googleApiKey = f.readString();
       googleApiKey.trim();
-      Serial.println("✓ Loaded Google API Key: " + (googleApiKey.length() > 0 ? googleApiKey.substring(0, 5) + "..." : "EMPTY"));
+      Serial.println("✓ Loaded Google API Key: " +
+                     (googleApiKey.length() > 0
+                          ? googleApiKey.substring(0, 5) + "..."
+                          : "EMPTY"));
       f.close();
     }
   }
@@ -2821,12 +3110,18 @@ void setup() {
       cStr.trim();
       hStr.trim();
       wStr.trim();
-      if (tStr.length() > 0) outsideTemp = tStr.toFloat();
-      if (cStr.length() > 0) weatherCond = cStr;
-      if (hStr.length() > 0) weatherHum = hStr;
-      if (wStr.length() > 0) weatherWind = wStr;
-      Serial.printf("✓ Loaded last known weather: %.1f C | Cond: %s | Hum: %s | Wind: %s\n",
-                    outsideTemp, weatherCond.c_str(), weatherHum.c_str(), weatherWind.c_str());
+      if (tStr.length() > 0)
+        outsideTemp = tStr.toFloat();
+      if (cStr.length() > 0)
+        weatherCond = cStr;
+      if (hStr.length() > 0)
+        weatherHum = hStr;
+      if (wStr.length() > 0)
+        weatherWind = wStr;
+      Serial.printf("✓ Loaded last known weather: %.1f C | Cond: %s | Hum: %s "
+                    "| Wind: %s\n",
+                    outsideTemp, weatherCond.c_str(), weatherHum.c_str(),
+                    weatherWind.c_str());
       f.close();
     }
   } else if (LittleFS.exists("/last_temp.txt")) {
@@ -2843,13 +3138,12 @@ void setup() {
     }
   }
 
-
-
   loadShiftConfig();
   loadAuthConfig();
 
-  // Initialize W5500 SPI Ethernet Module ONLY if a physical cable connection is detected.
-  // This avoids deadlocks between WiFi and Ethernet LwIP stacks when no Ethernet cable is plugged in.
+  // Initialize W5500 SPI Ethernet Module ONLY if a physical cable connection is
+  // detected. This avoids deadlocks between WiFi and Ethernet LwIP stacks when
+  // no Ethernet cable is plugged in.
   bool connected = false;
   isAPMode = false;
 
@@ -2857,20 +3151,25 @@ void setup() {
   bool ethCableConnected = checkW5500Link();
 
   if (ethCableConnected) {
-    Serial.println("🔌 W5500 Ethernet cable connection DETECTED! Initializing W5500...");
+    Serial.println(
+        "🔌 W5500 Ethernet cable connection DETECTED! Initializing W5500...");
 #if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
-    // Initialize W5500 with native ESP-IDF SPI host to ensure thread-safe transaction serialization on the shared bus
-    if (!ETH.begin(ETH_PHY_W5500, 0, ETH_CS_PIN, ETH_INT_PIN, ETH_RST_PIN, SPI2_HOST, TFT_SCLK, TFT_MISO, TFT_MOSI, 12)) {
+    // Initialize W5500 with native ESP-IDF SPI host to ensure thread-safe
+    // transaction serialization on the shared bus
+    if (!ETH.begin(ETH_PHY_W5500, 0, ETH_CS_PIN, ETH_INT_PIN, ETH_RST_PIN,
+                   SPI2_HOST, TFT_SCLK, TFT_MISO, TFT_MOSI, 12)) {
       Serial.println("❌ W5500 Ethernet Initialization Failed!");
       ethCableConnected = false;
     } else {
       Serial.println("✅ W5500 Ethernet Initialized Successfully!");
     }
 #else
-    Serial.println("ℹ️ W5500 LwIP Ethernet is natively supported on ESP32 Arduino Core v3.0.0+");
+    Serial.println("ℹ️ W5500 LwIP Ethernet is natively supported on ESP32 "
+                   "Arduino Core v3.0.0+");
 #endif
   } else {
-    Serial.println("⏳ W5500 Ethernet cable NOT DETECTED. Skipping Ethernet driver initialization to prevent WiFi deadlock.");
+    Serial.println("⏳ W5500 Ethernet cable NOT DETECTED. Skipping Ethernet "
+                   "driver initialization to prevent WiFi deadlock.");
   }
 
   if (ethCableConnected) {
@@ -2879,28 +3178,34 @@ void setup() {
     int attempts = 0;
     while (attempts < 20) { // Wait up to 10 seconds for IP
       esp_task_wdt_reset(); // Pet the watchdog
-      
+
       // Update screen with dynamic loading dot
-      drawNetworkInitScreen("Ethernet Cable", "Connecting...", "DHCP Request...", TFT_WHITE, TFT_YELLOW, true, attempts);
-      
+      drawNetworkInitScreen("Ethernet Cable", "Connecting...",
+                            "DHCP Request...", TFT_WHITE, TFT_YELLOW, true,
+                            attempts);
+
       if (ETH.localIP() != IPAddress(0, 0, 0, 0)) {
         connected = true;
         break;
       }
-      delay(500); // delay() automatically yields to the FreeRTOS scheduler to feed the Idle watchdog
+      delay(500); // delay() automatically yields to the FreeRTOS scheduler to
+                  // feed the Idle watchdog
       attempts++;
     }
 
     if (connected) {
       Serial.print("✓ Ethernet Connected! IP: ");
       Serial.println(ETH.localIP());
-      drawNetworkInitScreen("LAN Connected!", "Connected!", ETH.localIP().toString(), TFT_GREEN, TFT_WHITE, false);
+      drawNetworkInitScreen("LAN Connected!", "Connected!",
+                            ETH.localIP().toString(), TFT_GREEN, TFT_WHITE,
+                            false);
 
       if (weatherTaskHandle != NULL) {
         xTaskNotifyGive(weatherTaskHandle);
       }
 
-      // Ethernet is active; disconnect WiFi STA/AP and set mode to OFF to prevent event conflicts
+      // Ethernet is active; disconnect WiFi STA/AP and set mode to OFF to
+      // prevent event conflicts
       WiFi.disconnect(true);
       WiFi.mode(WIFI_OFF);
       delay(2000);
@@ -2960,10 +3265,12 @@ void setup() {
       int attempts = 0;
       while (WiFi.status() != WL_CONNECTED && attempts < 40) {
         esp_task_wdt_reset(); // Pet the watchdog
-        
+
         // Dynamic loading screen with rotating dot
-        drawNetworkInitScreen("WiFi Connecting", ssid.substring(0, 16), "Connecting...", TFT_WHITE, TFT_CYAN, true, attempts);
-        
+        drawNetworkInitScreen("WiFi Connecting", ssid.substring(0, 16),
+                              "Connecting...", TFT_WHITE, TFT_CYAN, true,
+                              attempts);
+
         delay(500);
         Serial.print(".");
         attempts++;
@@ -2975,14 +3282,16 @@ void setup() {
         Serial.println("\n✓ WiFi Connected!");
         Serial.print("  IP Address: ");
         Serial.println(WiFi.localIP());
-        drawNetworkInitScreen("WiFi Connected!", "Connected!", WiFi.localIP().toString(), TFT_GREEN, TFT_WHITE, false);
+        drawNetworkInitScreen("WiFi Connected!", "Connected!",
+                              WiFi.localIP().toString(), TFT_GREEN, TFT_WHITE,
+                              false);
 
         if (weatherTaskHandle != NULL) {
           xTaskNotifyGive(weatherTaskHandle);
         }
 
         delay(2000);
-        
+
         // Start AP Mode simultaneously at boot (runs for 5 minutes)
         isAPMode = true;
         apModeStartTime = millis();
@@ -2991,7 +3300,8 @@ void setup() {
         WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
         WiFi.softAP("Anurag_0.1_AP", "admin123");
         dnsServer.start(53, "*", apIP);
-        Serial.println("📡 AP Mode started simultaneously at boot (active for 5 minutes)");
+        Serial.println(
+            "📡 AP Mode started simultaneously at boot (active for 5 minutes)");
       } else {
         Serial.println("✗ WiFi connection failed");
         WiFi.disconnect();
@@ -3020,21 +3330,23 @@ void setup() {
     Serial.println("========================================\n");
 
     tft.fillScreen(0x0821); // Premium dark navy background
-    
+
     // Header Bar
     tft.fillRect(0, 0, 320, 48, 0x018C);
     tft.drawFastHLine(0, 48, 320, 0x03EF);
-    drawAutoScaledString("DEVICE CONFIG MODE", 160, 24, 4, 1.0f, 300, TFT_WHITE, 0x018C, true);
+    drawAutoScaledString("DEVICE CONFIG MODE", 160, 24, 4, 1.0f, 300, TFT_WHITE,
+                         0x018C, true);
 
     // Main Card
     uint16_t apBg = 0x10A2;
     tft.fillRoundRect(18, 73, 290, 330, 8, 0x0410); // Shadow
-    tft.fillRoundRect(15, 70, 290, 330, 8, apBg);     // Body
+    tft.fillRoundRect(15, 70, 290, 330, 8, apBg);   // Body
     tft.drawRoundRect(15, 70, 290, 330, 8, 0x028A); // Border
     tft.drawRoundRect(16, 71, 288, 328, 8, 0x03EF); // Glow
 
     // Section title
-    drawAutoScaledString("HOTSPOT SYSTEM ACTIVE", 160, 92, 2, 1.0f, 260, TFT_ORANGE, apBg, true);
+    drawAutoScaledString("HOTSPOT SYSTEM ACTIVE", 160, 92, 2, 1.0f, 260,
+                         TFT_ORANGE, apBg, true);
     tft.drawFastHLine(25, 108, 270, 0x028A);
 
     // Draw Wi-Fi Hotspot Icon in center (centered at x = 160, y = 145)
@@ -3045,36 +3357,44 @@ void setup() {
     tft.fillRect(135, 157, 50, 25, apBg); // Mask bottom half
 
     // AP Details (SSID, PASS, IP)
-    drawAutoScaledString("Connect to Wi-Fi Network:", 160, 185, 2, 0.9f, 260, 0x9DFD, apBg, true);
-    drawAutoScaledString("Anurag_0.1_AP", 160, 208, 4, 1.0f, 260, TFT_WHITE, apBg, true);
+    drawAutoScaledString("Connect to Wi-Fi Network:", 160, 185, 2, 0.9f, 260,
+                         0x9DFD, apBg, true);
+    drawAutoScaledString("Anurag_0.1_AP", 160, 208, 4, 1.0f, 260, TFT_WHITE,
+                         apBg, true);
 
-    drawAutoScaledString("Password:", 160, 238, 2, 0.9f, 260, 0x9DFD, apBg, true);
-    drawAutoScaledString("admin123", 160, 258, 4, 1.0f, 260, TFT_WHITE, apBg, true);
+    drawAutoScaledString("Password:", 160, 238, 2, 0.9f, 260, 0x9DFD, apBg,
+                         true);
+    drawAutoScaledString("admin123", 160, 258, 4, 1.0f, 260, TFT_WHITE, apBg,
+                         true);
 
-    drawAutoScaledString("Open Web Browser Page:", 160, 292, 2, 0.9f, 260, 0x9DFD, apBg, true);
-    drawAutoScaledString("http://192.168.4.1", 160, 316, 4, 1.1f, 260, TFT_GREEN, apBg, true);
-    drawAutoScaledString("(Portal automatically redirects)", 160, 342, 2, 0.8f, 260, TFT_CYAN, apBg, true);
+    drawAutoScaledString("Open Web Browser Page:", 160, 292, 2, 0.9f, 260,
+                         0x9DFD, apBg, true);
+    drawAutoScaledString("http://192.168.4.1", 160, 316, 4, 1.1f, 260,
+                         TFT_GREEN, apBg, true);
+    drawAutoScaledString("(Portal automatically redirects)", 160, 342, 2, 0.8f,
+                         260, TFT_CYAN, apBg, true);
 
     // Bottom Banner
     tft.fillRoundRect(18, 418, 290, 50, 6, 0x0410); // Shadow
     tft.fillRoundRect(15, 415, 290, 50, 6, 0x018C); // Body
     tft.drawRoundRect(15, 415, 290, 50, 6, 0x03EF); // Glow
-    drawAutoScaledString("CONFIGURE DEVICE SETTINGS", 160, 440, 2, 1.1f, 270, TFT_WHITE, 0x018C, true);
-    
+    drawAutoScaledString("CONFIGURE DEVICE SETTINGS", 160, 440, 2, 1.1f, 270,
+                         TFT_WHITE, 0x018C, true);
+
     delay(2000);
   }
 
-  // Initialize Watchdog Timer (Compatible with Arduino Core v2 and v3)
-  #if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
+// Initialize Watchdog Timer (Compatible with Arduino Core v2 and v3)
+#if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
   esp_task_wdt_config_t wdt_config = {
       .timeout_ms = WDT_TIMEOUT * 1000,
       .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,
       .trigger_panic = true,
   };
   esp_task_wdt_reconfigure(&wdt_config);
-  #else
+#else
   esp_task_wdt_init(WDT_TIMEOUT, true);
-  #endif
+#endif
   esp_task_wdt_add(NULL);
   Serial.println("✓ Watchdog timer initialized");
 
@@ -3103,7 +3423,8 @@ void setup() {
     if (f) {
       String countStr = f.readString();
       countStr.trim();
-      if (countStr.length() > 0) sqlTransferredLogs = countStr.toInt();
+      if (countStr.length() > 0)
+        sqlTransferredLogs = countStr.toInt();
       f.close();
     }
   }
@@ -3125,16 +3446,19 @@ void setup() {
   sqlTotalLogs = sqlTransferredLogs + sqlPendingLogs;
 
   // Spawn SQL sync background task
-  xTaskCreate([](void *p) {
-    while (true) {
-      extern void performSqlSync();
-      extern String sqlApiUrl;
-      if (sqlApiUrl.length() > 10 && WiFi.status() == WL_CONNECTED && LittleFS.exists("/pending_sync.txt")) {
-        performSqlSync();
-      }
-      vTaskDelay(pdMS_TO_TICKS(10000)); // check every 10 seconds
-    }
-  }, "sql_sync_task", 4096, NULL, 1, NULL);
+  xTaskCreate(
+      [](void *p) {
+        while (true) {
+          extern void performSqlSync();
+          extern String sqlApiUrl;
+          if (sqlApiUrl.length() > 10 && WiFi.status() == WL_CONNECTED &&
+              LittleFS.exists("/pending_sync.txt")) {
+            performSqlSync();
+          }
+          vTaskDelay(pdMS_TO_TICKS(10000)); // check every 10 seconds
+        }
+      },
+      "sql_sync_task", 4096, NULL, 1, NULL);
 
   drawTftDefaultScreen();
 }
@@ -3153,7 +3477,8 @@ void handleEnrollment() {
     wasEnrollActive = true;
     currentTftState = TFT_ENROLL_SCANNING;
     if (enrollType == "FINGER") {
-      drawTftEnrollScanningScreen("FINGER", enrollID, 1, "Place finger on sensor");
+      drawTftEnrollScanningScreen("FINGER", enrollID, 1,
+                                  "Place finger on sensor");
     } else {
       drawTftEnrollScanningScreen("RFID", -1, 0, "Place card on reader");
     }
@@ -3179,22 +3504,27 @@ void handleEnrollment() {
         isEnrollMode = false;
         lastScanTime = millis();
         triggerDeniedLed();
-        
+
         currentTftState = TFT_PUNCH_DENIED;
         drawTftDeniedScreen("Card Enroll", "Already Enrolled");
         tftMessageUntil = millis() + 3000;
       } else {
-        // Successfully scanned backup RFID card! Link it to current fingerprint session
+        // Successfully scanned backup RFID card! Link it to current fingerprint
+        // session
         if (enrollID != -1) {
-          ws.textAll("{\"type\":\"ENROLL_ST\",\"status\":\"SUCCESS\",\"uid\":\"" +
-                     String(enrollID) + "\",\"rfid\":\"" + uid +
-                     "\",\"msg\":\"Fingerprint & Card captured successfully!\"}");
-          drawTftEnrollScanningScreen("RFID", enrollID, 0, "Captured! Save in browser.");
+          ws.textAll(
+              "{\"type\":\"ENROLL_ST\",\"status\":\"SUCCESS\",\"uid\":\"" +
+              String(enrollID) + "\",\"rfid\":\"" + uid +
+              "\",\"msg\":\"Fingerprint & Card captured successfully!\"}");
+          drawTftEnrollScanningScreen("RFID", enrollID, 0,
+                                      "Captured! Save in browser.");
         } else {
-          ws.textAll("{\"type\":\"ENROLL_ST\",\"status\":\"SUCCESS\",\"uid\":\"" +
-                     uid + "\",\"rfid\":\"" + uid +
-                     "\",\"msg\":\"RFID Card captured successfully!\"}");
-          drawTftEnrollScanningScreen("RFID", -1, 0, "Card Captured! Save in browser.");
+          ws.textAll(
+              "{\"type\":\"ENROLL_ST\",\"status\":\"SUCCESS\",\"uid\":\"" +
+              uid + "\",\"rfid\":\"" + uid +
+              "\",\"msg\":\"RFID Card captured successfully!\"}");
+          drawTftEnrollScanningScreen("RFID", -1, 0,
+                                      "Card Captured! Save in browser.");
         }
         isEnrollMode = false;
         wasEnrollActive = false; // Prevent automatic loop reset to idle
@@ -3222,7 +3552,7 @@ void handleEnrollment() {
                          String(finger.fingerID) + "!\"}");
               isEnrollMode = false;
               triggerDeniedLed();
-              
+
               currentTftState = TFT_PUNCH_DENIED;
               drawTftDeniedScreen("Finger Enroll", "Already Exists");
               tftMessageUntil = millis() + 3000;
@@ -3233,12 +3563,14 @@ void handleEnrollment() {
                   "OK. Remove finger.\"}");
               finger.LEDcontrol(2, 25, 3); // Flashing Purple
               triggerBuzzer(100);
-              drawTftEnrollScanningScreen("FINGER", enrollID, 2, "1st Scan OK. Remove finger.");
+              drawTftEnrollScanningScreen("FINGER", enrollID, 2,
+                                          "1st Scan OK. Remove finger.");
             }
           } else {
             ws.textAll("{\"type\":\"ENROLL_ST\",\"msg\":\"Image too messy, try "
                        "again.\"}");
-            drawTftEnrollScanningScreen("FINGER", enrollID, 1, "Messy print. Try again.");
+            drawTftEnrollScanningScreen("FINGER", enrollID, 1,
+                                        "Messy print. Try again.");
           }
         }
       } else if (enrollStep == 2) {
@@ -3248,7 +3580,8 @@ void handleEnrollment() {
                      "finger again.\"}");
           finger.LEDcontrol(1, 100, 2); // Breathing Blue
           triggerBuzzer(100);
-          drawTftEnrollScanningScreen("FINGER", enrollID, 3, "Place finger again.");
+          drawTftEnrollScanningScreen("FINGER", enrollID, 3,
+                                      "Place finger again.");
         }
       } else if (enrollStep == 3) {
         int p = finger.getImage();
@@ -3259,10 +3592,12 @@ void handleEnrollment() {
                 fpUsed[enrollID] = true;
                 saveFpCache();
 
-                // Fingerprint successfully enrolled! Now transition to RFID linking stage
+                // Fingerprint successfully enrolled! Now transition to RFID
+                // linking stage
                 enrollType = "RFID";
                 enrollStep = 0; // Reset steps for RFID stage
-                enrollTimer = millis(); // Reset timer for card scan (gives another 45s)
+                enrollTimer =
+                    millis(); // Reset timer for card scan (gives another 45s)
 
                 ws.textAll(
                     "{\"type\":\"ENROLL_ST\",\"status\":\"FP_OK\",\"uid\":\"" +
@@ -3272,14 +3607,15 @@ void handleEnrollment() {
 
                 // Guide user to scan card next
                 triggerBuzzer(200);
-                drawTftEnrollScanningScreen("RFID", enrollID, 0, "FP Ok. Scan backup card.");
+                drawTftEnrollScanningScreen("RFID", enrollID, 0,
+                                            "FP Ok. Scan backup card.");
               } else {
                 ws.textAll("{\"type\":\"ENROLL_ST\",\"status\":\"FAIL\","
                            "\"msg\":\"Sensor memory full or error.\"}");
                 isEnrollMode = false;
                 lastScanTime = millis();
                 triggerDeniedLed();
-                
+
                 currentTftState = TFT_PUNCH_DENIED;
                 drawTftDeniedScreen("Finger Enroll", "Memory full / error");
                 tftMessageUntil = millis() + 3000;
@@ -3291,7 +3627,7 @@ void handleEnrollment() {
               lastScanTime = millis();
               finger.LEDcontrol(3, 0, 1);
               triggerDeniedLed();
-              
+
               currentTftState = TFT_PUNCH_DENIED;
               drawTftDeniedScreen("Finger Enroll", "Prints did not match");
               tftMessageUntil = millis() + 3000;
@@ -3299,7 +3635,8 @@ void handleEnrollment() {
           } else {
             ws.textAll("{\"type\":\"ENROLL_ST\",\"msg\":\"2nd Scan messy, try "
                        "again.\"}");
-            drawTftEnrollScanningScreen("FINGER", enrollID, 3, "2nd Scan messy. Try again.");
+            drawTftEnrollScanningScreen("FINGER", enrollID, 3,
+                                        "2nd Scan messy. Try again.");
           }
         }
       }
@@ -3317,7 +3654,7 @@ void handleEnrollment() {
       xSemaphoreGive(fpMutex);
     }
     triggerDeniedLed();
-    
+
     currentTftState = TFT_PUNCH_DENIED;
     drawTftDeniedScreen("Enrollment", "Timed Out");
     tftMessageUntil = millis() + 3000;
@@ -3329,24 +3666,27 @@ void loop() {
   esp_task_wdt_reset();
 
   // Monitor TFT board power status using the T_IRQ (Touch Interrupt) pin.
-  // When the TFT board is powered off, T_IRQ is pulled LOW. When powered on (and not touched), it reads HIGH.
+  // When the TFT board is powered off, T_IRQ is pulled LOW. When powered on
+  // (and not touched), it reads HIGH.
   static unsigned long lastPowerCheck = 0;
   static unsigned long lowStartTime = 0;
-  
+
   if (millis() - lastPowerCheck > 500) {
     lastPowerCheck = millis();
     int irqState = digitalRead(T_IRQ);
-    
+
     if (irqState == LOW) {
       if (lowStartTime == 0) {
         lowStartTime = millis();
       } else if (millis() - lowStartTime > 3000) {
-        // Consistently LOW for 3 seconds indicates the TFT board has lost power.
-        // We configure display pins as INPUT to prevent parasitic power leakage.
+        // Consistently LOW for 3 seconds indicates the TFT board has lost
+        // power. We configure display pins as INPUT to prevent parasitic power
+        // leakage.
         if (!tftWasPowerCycled) {
           tftWasPowerCycled = true;
-          Serial.println("🔌 TFT board power loss detected! Reconfiguring pins to INPUT to prevent parasitic power...");
-          
+          Serial.println("🔌 TFT board power loss detected! Reconfiguring pins "
+                         "to INPUT to prevent parasitic power...");
+
           pinMode(TFT_CS, INPUT);
           pinMode(T_CS, INPUT);
           pinMode(TFT_RS, INPUT);
@@ -3357,8 +3697,9 @@ void loop() {
     } else {
       // T_IRQ is HIGH (TFT board is powered and not touched)
       if (tftWasPowerCycled) {
-        Serial.println("🔌 TFT board power restore detected! Restoring pins and re-initializing display registers...");
-        
+        Serial.println("🔌 TFT board power restore detected! Restoring pins "
+                       "and re-initializing display registers...");
+
         // Restore pin configurations
         pinMode(TFT_CS, OUTPUT);
         digitalWrite(TFT_CS, HIGH);
@@ -3368,22 +3709,23 @@ void loop() {
         digitalWrite(TFT_BL, LOW); // Keep backlight off initially
         pinMode(TFT_RS, OUTPUT);
         pinMode(TFT_RST, OUTPUT);
-        
+
         // Let the TFT board's voltage stabilize
         delay(200);
-        
+
         // Perform clean hardware reset sequence on the TFT display
         digitalWrite(TFT_RST, LOW);
         delay(100);
         digitalWrite(TFT_RST, HIGH);
         delay(150);
-        
+
         // Re-initialize the display registers in LovyanGFX
         tft.init();
         tft.setRotation(4);
-        
-        tftWasPowerCycled = false; // Must set false BEFORE drawing so early returns don't trigger
-        
+
+        tftWasPowerCycled = false; // Must set false BEFORE drawing so early
+                                   // returns don't trigger
+
         // Redraw the current active screen buffer
         if (currentTftState == TFT_IDLE) {
           drawTftDefaultScreen();
@@ -3394,23 +3736,28 @@ void loop() {
         } else if (currentTftState == TFT_ENROLL_SCANNING) {
           String tempMsg = "Place card/finger to continue";
           if (enrollType == "FINGER") {
-            if (enrollStep == 1) tempMsg = "Place finger on sensor";
-            else if (enrollStep == 2) tempMsg = "Remove finger from sensor";
-            else if (enrollStep == 3) tempMsg = "Place same finger again";
+            if (enrollStep == 1)
+              tempMsg = "Place finger on sensor";
+            else if (enrollStep == 2)
+              tempMsg = "Remove finger from sensor";
+            else if (enrollStep == 3)
+              tempMsg = "Place same finger again";
           } else {
             tempMsg = "Place card on reader";
           }
-          drawTftEnrollScanningScreen(enrollType, enrollID, enrollStep, tempMsg, true);
+          drawTftEnrollScanningScreen(enrollType, enrollID, enrollStep, tempMsg,
+                                      true);
         } else if (currentTftState == TFT_ENROLL_CONFIRMED) {
           drawTftEnrollConfirmedScreen("Employee", "", "", enrollType);
         } else {
           drawTftDefaultScreen();
         }
-        
+
         // Turn backlight pin back HIGH now that the screen is drawn
         digitalWrite(TFT_BL, HIGH);
-        
-        Serial.println("✓ Display successfully re-initialized after power cycle!");
+
+        Serial.println(
+            "✓ Display successfully re-initialized after power cycle!");
       }
       lowStartTime = 0;
     }
@@ -3427,7 +3774,8 @@ void loop() {
 #endif
 
     if (!ethActive) {
-      // If we are not connected to WiFi STA and AP mode is not active, start AP Mode
+      // If we are not connected to WiFi STA and AP mode is not active, start AP
+      // Mode
       if (WiFi.status() != WL_CONNECTED && !isAPMode) {
         Serial.println("📡 No active connection detected. Starting AP Mode...");
         isAPMode = true;
@@ -3478,16 +3826,18 @@ void loop() {
       // Read touch screen interaction with noise filtering and debouncing
       int32_t tx = 0, ty = 0;
       if (tft.getTouch(&tx, &ty)) {
-        // Debounce: verify touch stability and filter coordinates over 3 samples (12ms total)
+        // Debounce: verify touch stability and filter coordinates over 3
+        // samples (12ms total)
         int32_t sumX = tx;
         int32_t sumY = ty;
         int32_t validCount = 1;
-        
+
         for (int i = 0; i < 3; i++) {
           delay(4); // 4ms sampling interval
           int32_t cx = 0, cy = 0;
           if (tft.getTouch(&cx, &cy)) {
-            // Keep only coordinates close to the initial touch to filter out wild jumps/release spikes
+            // Keep only coordinates close to the initial touch to filter out
+            // wild jumps/release spikes
             if (abs(cx - tx) < 35 && abs(cy - ty) < 35) {
               sumX += cx;
               sumY += cy;
@@ -3495,17 +3845,19 @@ void loop() {
             }
           }
         }
-        
+
         // We only process if we got at least 2 matching stable samples
         if (validCount >= 2) {
           tx = sumX / validCount;
           ty = sumY / validCount;
-          
-          Serial.printf("🎯 STABLE TOUCH DETECTED! Averaged coordinates: x = %d, y = %d\n", tx, ty);
-          
+
+          Serial.printf("🎯 STABLE TOUCH DETECTED! Averaged coordinates: x = "
+                        "%d, y = %d\n",
+                        tx, ty);
+
           bool isClickedIn = false;
           bool isClickedOut = false;
-          
+
           // --- Calibrated touch detection for the display offset ---
           // Top button (PUNCH IN): reports ty in 195..300
           // Bottom button (PUNCH OUT): reports ty in 90..190
@@ -3516,30 +3868,39 @@ void loop() {
               isClickedOut = true;
             }
           }
-          
+
           // Process final decision with visual button highlight feedback
           if (isClickedIn) {
-            // Visual feedback: redraw IN button in bright green highlighted state
-            tft.fillRoundRect(40, 220, 240, 76, 12, 0x07E0); // Lighter bright green
+            // Visual feedback: redraw IN button in bright green highlighted
+            // state
+            tft.fillRoundRect(40, 220, 240, 76, 12,
+                              0x07E0); // Lighter bright green
             tft.drawRoundRect(40, 220, 240, 76, 12, TFT_WHITE);
-            drawAutoScaledString("PUNCH IN  >>", 175, 245, 4, 1.3f, 160, TFT_WHITE, 0x07E0, true);
-            drawAutoScaledString("(Start Shift)", 175, 275, 2, 1.0f, 160, TFT_WHITE, 0x07E0, true);
+            drawAutoScaledString("PUNCH IN  >>", 175, 245, 4, 1.3f, 160,
+                                 TFT_WHITE, 0x07E0, true);
+            drawAutoScaledString("(Start Shift)", 175, 275, 2, 1.0f, 160,
+                                 TFT_WHITE, 0x07E0, true);
             delay(80); // Linger for feedback
-            
+
             hasPendingPunch = false;
             savePunchRecord(pendingPunchId, pendingPunchIsFinger, "In");
           } else if (isClickedOut) {
-            // Visual feedback: redraw OUT button in bright red highlighted state
-            tft.fillRoundRect(40, 310, 240, 76, 12, 0xF800); // Lighter bright red
+            // Visual feedback: redraw OUT button in bright red highlighted
+            // state
+            tft.fillRoundRect(40, 310, 240, 76, 12,
+                              0xF800); // Lighter bright red
             tft.drawRoundRect(40, 310, 240, 76, 12, TFT_WHITE);
-            drawAutoScaledString("<<  PUNCH OUT", 175, 335, 4, 1.3f, 160, TFT_WHITE, 0xF800, true);
-            drawAutoScaledString("(End Shift)", 175, 365, 2, 1.0f, 160, TFT_WHITE, 0xF800, true);
+            drawAutoScaledString("<<  PUNCH OUT", 175, 335, 4, 1.3f, 160,
+                                 TFT_WHITE, 0xF800, true);
+            drawAutoScaledString("(End Shift)", 175, 365, 2, 1.0f, 160,
+                                 TFT_WHITE, 0xF800, true);
             delay(80); // Linger for feedback
-            
+
             hasPendingPunch = false;
             savePunchRecord(pendingPunchId, pendingPunchIsFinger, "Out");
           } else {
-            // If they click too far top or bottom, or somewhere else, treat as cancel
+            // If they click too far top or bottom, or somewhere else, treat as
+            // cancel
             hasPendingPunch = false;
             currentTftState = TFT_IDLE;
             drawTftDefaultScreen();
@@ -3559,12 +3920,15 @@ void loop() {
       // Dynamic countdown update on TFT screen
       static unsigned long lastCountdownUpdate = 0;
       int secLeft = (int)((pending2FATimeout - nowMs) / 1000) + 1;
-      if (secLeft < 0) secLeft = 0;
-      if (secLeft > 10) secLeft = 10;
+      if (secLeft < 0)
+        secLeft = 0;
+      if (secLeft > 10)
+        secLeft = 10;
       if (nowMs - lastCountdownUpdate >= 200) {
         lastCountdownUpdate = nowMs;
         String countStr = "Timeout in " + String(secLeft) + "s ";
-        drawAutoScaledString(countStr, 160, 438, 2, 1.0f, 270, TFT_RED, TFT_BLACK, true);
+        drawAutoScaledString(countStr, 160, 438, 2, 1.0f, 270, TFT_RED,
+                             TFT_BLACK, true);
       }
     }
   } else if (nowMs < tftMessageUntil) {
@@ -3588,19 +3952,21 @@ void loop() {
   ws.cleanupClients();
 
   // Handle AP Mode Timeout (5 minutes)
-  if (isAPMode && apModeStartTime > 0 && (millis() - apModeStartTime >= 300000)) {
-    Serial.println("⏰ AP Mode 5-minute timer expired! Shutting down AP Mode...");
+  if (isAPMode && apModeStartTime > 0 &&
+      (millis() - apModeStartTime >= 300000)) {
+    Serial.println(
+        "⏰ AP Mode 5-minute timer expired! Shutting down AP Mode...");
     WiFi.softAPdisconnect(true);
     dnsServer.stop();
     isAPMode = false;
     apModeStartTime = 0;
-    
+
     // Switch back to STA mode
     WiFi.mode(WIFI_STA);
     if (WiFi.status() != WL_CONNECTED) {
       WiFi.begin();
     }
-    
+
     drawTftDefaultScreen();
   }
 
@@ -3647,7 +4013,8 @@ void loop() {
         drawTftDefaultScreen();
       }
     }
-    // RFID Scanning: Rate-limited to every 60ms to prevent SPI bus/CPU contention
+    // RFID Scanning: Rate-limited to every 60ms to prevent SPI bus/CPU
+    // contention
     static unsigned long lastRfidCheck = 0;
     bool cardPresent = false;
     if (nowMs - lastRfidCheck >= 60) {
@@ -3770,36 +4137,47 @@ void loop() {
       }
     }
 
-    vTaskDelay(pdMS_TO_TICKS(2)); // Small scheduler yield to prevent CPU starvation while keeping loop extremely fast
+    vTaskDelay(
+        pdMS_TO_TICKS(2)); // Small scheduler yield to prevent CPU starvation
+                           // while keeping loop extremely fast
   } else {
     // Handle fingerprint enrollment
     handleEnrollment();
-    vTaskDelay(pdMS_TO_TICKS(10)); // Yield to prevent CPU starvation in enrollment mode
+    vTaskDelay(pdMS_TO_TICKS(
+        10)); // Yield to prevent CPU starvation in enrollment mode
   }
 }
 
-void queueSqlSync(String id, String name, String role, String dir, String status, String type) {
+void queueSqlSync(String id, String name, String role, String dir,
+                  String status, String type) {
   File fsync = LittleFS.open("/pending_sync.txt", FILE_APPEND);
-  if (!fsync) fsync = LittleFS.open("/pending_sync.txt", FILE_WRITE);
+  if (!fsync)
+    fsync = LittleFS.open("/pending_sync.txt", FILE_WRITE);
   if (fsync) {
     time_t nowTime;
     time(&nowTime);
-    fsync.println(String(nowTime) + "|" + id + "|" + name + "|" + role + "|" + dir + "|" + status + "|" + type);
+    fsync.println(String(nowTime) + "|" + id + "|" + name + "|" + role + "|" +
+                  dir + "|" + status + "|" + type);
     fsync.close();
     sqlPendingLogs++;
     sqlTotalLogs = sqlTransferredLogs + sqlPendingLogs;
-    ws.textAll("{\"type\":\"SQL_SYNC\",\"transferred\":" + String(sqlTransferredLogs) + 
-              ",\"pending\":" + String(sqlPendingLogs) + "}");
+    ws.textAll(
+        "{\"type\":\"SQL_SYNC\",\"transferred\":" + String(sqlTransferredLogs) +
+        ",\"pending\":" + String(sqlPendingLogs) + "}");
   }
 }
 
 void performSqlSync() {
-  if (sqlApiUrl.length() < 10) return;
-  if (WiFi.status() != WL_CONNECTED) return;
-  if (!LittleFS.exists("/pending_sync.txt")) return;
+  if (sqlApiUrl.length() < 10)
+    return;
+  if (WiFi.status() != WL_CONNECTED)
+    return;
+  if (!LittleFS.exists("/pending_sync.txt"))
+    return;
 
   File f = LittleFS.open("/pending_sync.txt", FILE_READ);
-  if (!f) return;
+  if (!f)
+    return;
 
   // Read up to 20 lines to sync in this batch
   String lines[20];
@@ -3811,7 +4189,7 @@ void performSqlSync() {
       count++;
     }
   }
-  
+
   // Keep track of remaining lines in the file
   String remaining = "";
   while (f.available()) {
@@ -3861,11 +4239,13 @@ void performSqlSync() {
       HTTPClient http;
       String targetEndpoint = sqlApiUrl;
       int protoIdx = targetEndpoint.indexOf("//");
-      int slashIdx = targetEndpoint.indexOf('/', (protoIdx != -1) ? protoIdx + 2 : 0);
+      int slashIdx =
+          targetEndpoint.indexOf('/', (protoIdx != -1) ? protoIdx + 2 : 0);
       if (slashIdx == -1) {
         targetEndpoint += "/add-log";
       }
-      Serial.printf("🌐 [SQL SYNC] Sending log %d/%d to %s...\n", i+1, count, targetEndpoint.c_str());
+      Serial.printf("🌐 [SQL SYNC] Sending log %d/%d to %s...\n", i + 1, count,
+                    targetEndpoint.c_str());
       http.begin(targetEndpoint);
       http.addHeader("Content-Type", "application/json");
       http.setTimeout(5000);
@@ -3877,7 +4257,9 @@ void performSqlSync() {
       if (code == 200) {
         successCount++;
       } else {
-        Serial.printf("❌ [SQL SYNC] Sync failed for record %s (HTTP Code: %d)\n", id.c_str(), code);
+        Serial.printf(
+            "❌ [SQL SYNC] Sync failed for record %s (HTTP Code: %d)\n",
+            id.c_str(), code);
         for (int k = i; k < count; k++) {
           remaining = lines[k] + "\n" + remaining;
         }
@@ -3907,14 +4289,16 @@ void performSqlSync() {
       sqlPendingLogs = 0;
     }
     sqlTotalLogs = sqlTransferredLogs + sqlPendingLogs;
-    
+
     File fs = LittleFS.open("/sql_transferred.txt", FILE_WRITE);
     if (fs) {
       fs.print(sqlTransferredLogs);
       fs.close();
     }
-    
-    ws.textAll("{\"type\":\"SQL_SYNC\",\"transferred\":" + String(sqlTransferredLogs) + 
-              ",\"pending\":" + String(sqlPendingLogs) + "}");
+
+    ws.textAll(
+        "{\"type\":\"SQL_SYNC\",\"transferred\":" + String(sqlTransferredLogs) +
+        ",\"pending\":" + String(sqlPendingLogs) + "}");
   }
 }
+// this is cool
