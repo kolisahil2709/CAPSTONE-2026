@@ -1,15 +1,16 @@
 import sqlite3
 import json
 import datetime
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import urllib.parse
 import os
 
 DB_FILE = "attendance.db"
 
 def init_db():
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(DB_FILE, timeout=10.0)
     c = conn.cursor()
+    c.execute('PRAGMA journal_mode=WAL;')
     c.execute('''
         CREATE TABLE IF NOT EXISTS attendance_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,7 +49,7 @@ class SQLBridgeHandler(BaseHTTPRequestHandler):
                 status = str(log.get('status', ''))
                 log_type = str(log.get('type', log.get('method', '')))
 
-                conn = sqlite3.connect(DB_FILE)
+                conn = sqlite3.connect(DB_FILE, timeout=10.0)
                 c = conn.cursor()
                 c.execute('''
                     INSERT INTO attendance_logs (timestamp, user_id, name, role, direction, status, type)
@@ -94,7 +95,7 @@ class SQLBridgeHandler(BaseHTTPRequestHandler):
                 start_ts = int(day_start.timestamp())
                 end_ts = int(day_end.timestamp())
 
-                conn = sqlite3.connect(DB_FILE)
+                conn = sqlite3.connect(DB_FILE, timeout=10.0)
                 c = conn.cursor()
                 
                 q = "SELECT timestamp, user_id, name, role, direction, status, type FROM attendance_logs WHERE timestamp >= ? AND timestamp < ?"
@@ -132,6 +133,23 @@ class SQLBridgeHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(f"Error: {str(e)}".encode('utf-8'))
                 print(f"[SQL BRIDGE ERROR] Failed to fetch logs: {e}")
+        elif parsed_url.path == '/clear-db':
+            try:
+                conn = sqlite3.connect(DB_FILE, timeout=10.0)
+                conn.execute('DELETE FROM attendance_logs')
+                conn.commit()
+                conn.close()
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/plain')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(b"Database Cleared Successfully")
+                print("[SQL BRIDGE] Database cleared via /clear-db request.")
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'text/plain')
+                self.end_headers()
+                self.wfile.write(f"Error: {str(e)}".encode('utf-8'))
         else:
             self.send_response(404)
             self.end_headers()
@@ -139,7 +157,7 @@ class SQLBridgeHandler(BaseHTTPRequestHandler):
 def run(port=5000):
     init_db()
     server_address = ('', port)
-    httpd = HTTPServer(server_address, SQLBridgeHandler)
+    httpd = ThreadingHTTPServer(server_address, SQLBridgeHandler)
     print("==================================================================")
     print(f" [SQL BRIDGE] Attendance Sync Server Running on port {port}")
     print("==================================================================")
@@ -148,6 +166,7 @@ def run(port=5000):
     print(f"  - POST /webhook/scan : Receive webhook/log scans from ESP32")
     print(f"  - POST /add-log       : Receive logs from ESP32")
     print(f"  - GET  /get-logs      : Fetch daily historical logs")
+    print(f"  - GET  /clear-db      : Clear database records")
     print("==================================================================")
     print(" Press Ctrl+C to stop.")
     try:

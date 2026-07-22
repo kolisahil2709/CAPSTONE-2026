@@ -1216,6 +1216,142 @@ void setupDashboard() {
     }
   });
 
+  server.on("/factory-reset", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!isAuth(request)) return request->send(403, "text/plain", "Unauthorized");
+    Serial.println("🔥 Factory Reset requested! Erasing all LittleFS files, logs, and sensor templates...");
+
+    // 1. Collect all file paths in LittleFS root to avoid iterator mutation skips
+    std::vector<String> filesToDelete;
+    File root = LittleFS.open("/");
+    if (root && root.isDirectory()) {
+      File file = root.openNextFile();
+      while (file) {
+        String fn = String(file.name());
+        if (!fn.startsWith("/")) fn = "/" + fn;
+        filesToDelete.push_back(fn);
+        file = root.openNextFile();
+      }
+      root.close();
+    }
+
+    // Also collect files inside /photos directory if present
+    if (LittleFS.exists("/photos")) {
+      File pDir = LittleFS.open("/photos");
+      if (pDir && pDir.isDirectory()) {
+        File file = pDir.openNextFile();
+        while (file) {
+          String fn = String(file.name());
+          if (!fn.startsWith("/photos/")) fn = "/photos/" + fn;
+          filesToDelete.push_back(fn);
+          file = pDir.openNextFile();
+        }
+        pDir.close();
+      }
+      LittleFS.rmdir("/photos");
+    }
+
+    // Now delete all collected files cleanly
+    for (size_t i = 0; i < filesToDelete.size(); i++) {
+      LittleFS.remove(filesToDelete[i]);
+    }
+
+    // Explicitly remove system sync and state files
+    LittleFS.remove("/pending_sync.txt");
+    LittleFS.remove("/sql_config.txt");
+    LittleFS.remove("/sql_transferred.txt");
+    LittleFS.remove("/weather_city.txt");
+    LittleFS.remove("/holidays.json");
+    LittleFS.remove("/wifi.txt");
+    LittleFS.remove("/wifi.conf");
+
+    // 2. Reset in-memory SQL sync stats
+    sqlPendingLogs = 0;
+    sqlTransferredLogs = 0;
+    sqlTotalLogs = 0;
+
+    // 3. Clear EEPROM logger
+    clearAllEEPROMLogs();
+
+    // 4. Clear Fingerprint Sensor database
+    if (xSemaphoreTake(fpMutex, pdMS_TO_TICKS(2000))) {
+      finger.emptyDatabase();
+      xSemaphoreGive(fpMutex);
+    }
+    for (int i = 1; i <= MAX_FP; i++) {
+      fpUsed[i] = false;
+    }
+    extern void saveFpCache();
+    saveFpCache();
+
+    // Broadcast reset state to all open web dashboard clients
+    ws.textAll("{\"type\":\"SQL_SYNC\",\"transferred\":0,\"pending\":0}");
+
+    request->send(200, "text/plain", "OK");
+    
+    // Schedule reboot after 2 seconds
+    restartTime = millis() + 2000;
+  });
+
+  server.on("/delete-logs", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!isAuth(request)) return request->send(403, "text/plain", "Unauthorized");
+    if (!request->hasParam("date")) return request->send(400, "text/plain", "Missing date");
+    String dateStr = request->getParam("date")->value();
+    
+    // Delete LittleFS CSV file for target date
+    String logPath = "/logs_" + dateStr + ".csv";
+    if (LittleFS.exists(logPath)) {
+      LittleFS.remove(logPath);
+    }
+    
+    // Delete EEPROM logs for target date
+    if (useEEPROM) {
+      deleteEEPROMLogsForDate(dateStr);
+    }
+    
+    updateFsSizes();
+    request->send(200, "text/plain", "OK");
+  });
+
+  server.on("/delete-all-logs", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!isAuth(request)) return request->send(403, "text/plain", "Unauthorized");
+    Serial.println("🗑 Erasing ALL history logs...");
+    
+    // Collect all log files
+    std::vector<String> logFiles;
+    File root = LittleFS.open("/");
+    if (root && root.isDirectory()) {
+      File file = root.openNextFile();
+      while (file) {
+        String fn = String(file.name());
+        if (fn.startsWith("logs_") || fn.startsWith("/logs_")) {
+          if (!fn.startsWith("/")) fn = "/" + fn;
+          logFiles.push_back(fn);
+        }
+        file = root.openNextFile();
+      }
+      root.close();
+    }
+    
+    // Delete collected log files
+    for (size_t i = 0; i < logFiles.size(); i++) {
+      LittleFS.remove(logFiles[i]);
+    }
+    
+    // Clear pending queue & transferred logs
+    LittleFS.remove("/pending_sync.txt");
+    LittleFS.remove("/sql_transferred.txt");
+    sqlPendingLogs = 0;
+    sqlTransferredLogs = 0;
+    sqlTotalLogs = 0;
+    
+    // Clear EEPROM logger
+    clearAllEEPROMLogs();
+    
+    updateFsSizes();
+    ws.textAll("{\"type\":\"SQL_SYNC\",\"transferred\":0,\"pending\":0}");
+    request->send(200, "text/plain", "OK");
+  });
+
   server.on("/manual-punch", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (!isAuth(request)) return request->send(403, "text/plain", "Unauthorized");
     if (!request->hasParam("uid") || !request->hasParam("dir")) {

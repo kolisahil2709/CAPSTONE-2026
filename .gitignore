@@ -6,6 +6,8 @@ build/
 
 # Database files
 attendance.db
+attendance.db-shm
+attendance.db-wal
 
 # Cache & Temporary files
 __pycache__/

@@ -1590,7 +1590,7 @@ input[type="checkbox"]:not(.switch input):checked::before {
               <option value="">All Departments</option>
             </select>
             <button class="btn btn-outline" onclick="loadDirectory()">🔄 Refresh</button>
-            <button class="btn btn-primary" onclick="show('reg')" style="margin-left:auto;">➕ Enroll Employee</button>
+            <button class="btn btn-primary" onclick="openAddEmployeeModal()" style="margin-left:auto;">➕ Add Employee</button>
           </div>
           <div style="overflow-x:auto;">
             <table>
@@ -2117,6 +2117,59 @@ input[type="checkbox"]:not(.switch input):checked::before {
 </div><!-- /main-app -->
 
 
+<!-- ADD EMPLOYEE MODAL -->
+<div id="add-emp-modal" class="modal">
+  <div class="modal-content">
+    <h3 style="margin-top:0;">➕ Add New Employee</h3>
+    <p class="hint" style="margin-bottom:15px;">Enter employee profile details to register in the database.</p>
+    <label>Employee ID / Roll No</label>
+    <input type="text" id="add-roll" placeholder="e.g. 001, 102">
+    <label>Full Name</label>
+    <input type="text" id="add-name" placeholder="e.g. Anurag Mourya">
+    <label>Designation / Role</label>
+    <select id="add-role">
+      <option>Employee</option>
+      <option>Manager</option>
+      <option>Admin</option>
+      <option>Student</option>
+      <option>Staff</option>
+      <option>Other</option>
+    </select>
+    <label>Department / Class</label>
+    <input type="text" id="add-dept" placeholder="e.g. IT, HR, CS-A">
+    <label>RFID Card UID (Optional)</label>
+    <input type="text" id="add-rfid" placeholder="e.g. AABBCCDD (or leave empty)">
+    
+    <div class="row" style="margin-top:20px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="submitAddEmployee()">Save Employee</button>
+      <button class="btn btn-outline" onclick="closeAddEmployeeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- POST-CREATION HARDWARE ENROLLMENT PROMPT MODAL -->
+<div id="post-enroll-modal" class="modal">
+  <div class="modal-content" style="text-align:center; max-width:440px;">
+    <h3 style="margin-top:0; color:var(--success);">✅ Employee Saved Successfully!</h3>
+    <p style="font-size:14px; color:var(--text); margin-bottom:15px;">
+      Employee <strong id="post-enroll-name-display">--</strong> (ID: <strong id="post-enroll-id-display">--</strong>) has been registered.
+    </p>
+    <p class="hint" style="margin-bottom:20px;">Would you like to enroll Hardware Credentials (Biometric Fingerprint or RFID Card) on the physical device now?</p>
+    
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn btn-primary" style="justify-content:center; padding:12px; font-weight:700;" onclick="startPostEnrollment('FINGER')">
+        👆 Enroll Fingerprint Scan
+      </button>
+      <button class="btn btn-outline" style="justify-content:center; padding:12px; font-weight:700; border-color:var(--primary); color:var(--primary);" onclick="startPostEnrollment('RFID')">
+        🪪 Enroll RFID Card
+      </button>
+      <button class="btn btn-outline" style="justify-content:center; margin-top:5px;" onclick="closePostEnrollModal()">
+        Done (Enroll Later)
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT MODAL -->
 <div id="edit-modal" class="modal">
   <div class="modal-content">
@@ -2137,9 +2190,12 @@ input[type="checkbox"]:not(.switch input):checked::before {
       <label>Linked RFID Card UID (Optional)</label>
       <input type="text" id="edit-rfid" placeholder="e.g. AABBCCDD">
     </div>
-    <div id="edit-upgrade-container" style="display:none; margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
-      <label>Biometric Upgrade</label>
-      <button class="btn btn-outline" style="width:100%; border-color:var(--primary); color:var(--primary); font-weight:700; height:42px; display:inline-flex; align-items:center; justify-content:center; gap:8px;" onclick="upgradeToBiometric()">👆 Add Fingerprint to Employee</button>
+    <div style="margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
+      <label style="font-weight:700; color:var(--primary);">⚡ Hardware Credentials</label>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn btn-outline btn-sm" style="flex:1; border-color:var(--primary); color:var(--primary); font-weight:700; padding:8px;" onclick="launchEnrollmentFromEdit('FINGER')">👆 Fingerprint</button>
+        <button class="btn btn-outline btn-sm" style="flex:1; border-color:var(--primary); color:var(--primary); font-weight:700; padding:8px;" onclick="launchEnrollmentFromEdit('RFID')">🪪 RFID Card</button>
+      </div>
     </div>
     <div class="row" style="margin-top:20px;">
       <button class="btn btn-primary" style="flex:1;" onclick="submitEdit()">Update</button>
@@ -3334,37 +3390,112 @@ function closeModal() {
   var em = document.getElementById('edit-modal');
   if (em) em.style.display = 'none';
 }
-var prefilledRFID = "";
-function upgradeToBiometric() {
-  var uid = document.getElementById('edit-uid').value;
+function openAddEmployeeModal() {
+  document.getElementById('add-roll').value = '';
+  document.getElementById('add-name').value = '';
+  document.getElementById('add-dept').value = '';
+  document.getElementById('add-rfid').value = '';
+  document.getElementById('add-role').value = 'Employee';
+  fetchNextIDForAdd();
+  var m = document.getElementById('add-emp-modal');
+  if (m) m.style.display = 'flex';
+}
+function closeAddEmployeeModal() {
+  var m = document.getElementById('add-emp-modal');
+  if (m) m.style.display = 'none';
+}
+function fetchNextIDForAdd() {
+  safeFetch('/list-users')
+    .then(function(r){ return r.json(); })
+    .then(function(users){
+      var maxId = 0;
+      users.forEach(function(u){
+        var idNum = parseInt(u.roll || u.uid, 10);
+        if(!isNaN(idNum) && idNum > maxId) maxId = idNum;
+      });
+      var nextId = String(maxId + 1);
+      while(nextId.length < 3) nextId = '0' + nextId;
+      var ar = document.getElementById('add-roll');
+      if (ar && !ar.value) ar.value = nextId;
+    });
+}
+var lastAddedEmp = { roll: '', name: '', role: '', dept: '', rfid: '' };
+function submitAddEmployee() {
+  var roll = document.getElementById('add-roll').value.trim();
+  var name = document.getElementById('add-name').value.trim();
+  var role = document.getElementById('add-role').value;
+  var dept = document.getElementById('add-dept').value.trim();
+  var rfid = document.getElementById('add-rfid').value.trim().toUpperCase().replace(/\s+/g, '');
+
+  if (!name || !roll) return showToast("Name and Employee ID are required", "error");
+
+  lastAddedEmp = { roll: roll, name: name, role: role, dept: dept, rfid: rfid };
+  var uid = rfid ? rfid : roll;
+
+  safeFetch('/save?uid=' + encodeURIComponent(uid) + '&name=' + encodeURIComponent(name) + '&role=' + encodeURIComponent(role) + '&roll=' + encodeURIComponent(roll) + '&dept=' + encodeURIComponent(dept) + '&type=RFID&rfid=' + encodeURIComponent(rfid))
+    .then(function(r) {
+      if (r.ok) {
+        showToast("Employee created!", "success");
+        closeAddEmployeeModal();
+        loadDirectory();
+        promptHardwareEnrollment(name, roll);
+      } else {
+        showToast("Failed to save employee", "error");
+      }
+    });
+}
+function promptHardwareEnrollment(name, roll) {
+  document.getElementById('post-enroll-name-display').innerText = name;
+  document.getElementById('post-enroll-id-display').innerText = roll;
+  var m = document.getElementById('post-enroll-modal');
+  if (m) m.style.display = 'flex';
+}
+function closePostEnrollModal() {
+  var m = document.getElementById('post-enroll-modal');
+  if (m) m.style.display = 'none';
+}
+function startPostEnrollment(method) {
+  closePostEnrollModal();
+  show('reg');
+  
+  document.getElementById('reg-roll').value = lastAddedEmp.roll;
+  document.getElementById('reg-n').value = lastAddedEmp.name;
+  document.getElementById('reg-r').value = lastAddedEmp.role;
+  if (document.getElementById('reg-dept')) {
+    document.getElementById('reg-dept').value = lastAddedEmp.dept;
+  }
+  var em = document.getElementById('enroll-method');
+  if (em) {
+    em.value = method;
+    toggleEnrollMethod();
+  }
+  showToast("Details pre-filled. Click Start Hardware Scan to capture credentials.", "info");
+}
+function launchEnrollmentFromEdit(method) {
   var name = document.getElementById('edit-name').value;
   var role = document.getElementById('edit-role').value;
   var roll = document.getElementById('edit-roll').value;
   var edept = document.getElementById('edit-dept');
   var dept = edept ? edept.value : '';
-  
-  if(!name || !roll) return showToast("Fields cannot be empty", "error");
-  
-  prefilledRFID = uid.toUpperCase().replace(/\s+/g, '');
-  
+
   closeModal();
   show('reg');
-  
+
   document.getElementById('reg-roll').value = roll;
   document.getElementById('reg-n').value = name;
   document.getElementById('reg-r').value = role;
   if (document.getElementById('reg-dept')) {
     document.getElementById('reg-dept').value = dept;
   }
-  
   var em = document.getElementById('enroll-method');
   if (em) {
-    em.value = 'RFID';
+    em.value = method;
     toggleEnrollMethod();
   }
-  
-  fetchNextID();
-  showToast("Pre-filled details. Click Start Hardware Scan to capture RFID card.", "info");
+  showToast("Employee details pre-filled. Click Start Hardware Scan to capture " + method + ".", "info");
+}
+function upgradeToBiometric() {
+  launchEnrollmentFromEdit('FINGER');
 }
 function submitEdit() {
   var uid = document.getElementById('edit-uid').value;
