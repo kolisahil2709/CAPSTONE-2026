@@ -81,28 +81,33 @@ bool isAuth(AsyncWebServerRequest *request) {
 
 void setupDashboard() {
   // Authentication Routes
-  server.on("/api/login", HTTP_POST, [](AsyncWebServerRequest *request) {
+  server.on("/api/login", HTTP_ANY, [](AsyncWebServerRequest *request) {
     String username = "";
     String password = "";
     
-    if (request->hasParam("username", true)) {
+    if (request->hasParam("username")) {
+      username = request->getParam("username")->value();
+    } else if (request->hasParam("username", true)) {
       username = request->getParam("username", true)->value();
     }
-    if (request->hasParam("password", true)) {
-      password = request->getParam("password", true)->value();
-    }
     
-    if (username.length() == 0 && request->hasParam("username")) {
-      username = request->getParam("username")->value();
-    }
-    if (password.length() == 0 && request->hasParam("password")) {
+    if (request->hasParam("password")) {
       password = request->getParam("password")->value();
+    } else if (request->hasParam("password", true)) {
+      password = request->getParam("password", true)->value();
     }
 
     extern char loginUser[32];
     extern char loginPass[32];
     
-    if (username == String(loginUser) && password == String(loginPass)) {
+    username.trim();
+    password.trim();
+    String expectedUser = String(loginUser);
+    String expectedPass = String(loginPass);
+    expectedUser.trim();
+    expectedPass.trim();
+
+    if (username.equalsIgnoreCase(expectedUser) && password == expectedPass) {
       AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"status\":\"success\"}");
       response->addHeader("Set-Cookie", "session=admin_active; Path=/; HttpOnly");
       request->send(response);
