@@ -4235,28 +4235,27 @@ function fetchHistory() {
                 }
               }
               
-              // Fill in absent entries for all other registered employees
-              hasData = true;
-              usersList.forEach(function(u) {
-                var id = u.roll || u.uid;
-                var recKey = dateStr + "_" + id;
-                if (!records[recKey]) {
-                  var statusStr = hObj ? ("Holiday (" + hObj.name + " - " + hObj.type + ")") : (dateObj.isSunday ? "Weekly Off" : "Absent");
-                  records[recKey] = {
-                    date: dateStr,
-                    id: id,
-                    name: u.name,
-                    role: u.role || "-",
-                    inTime: "-",
-                    outTime: "-",
-                    status: statusStr,
-                    type: "-",
-                    accepted: (hObj || dateObj.isSunday) ? true : false
-                  };
-                  order.push(recKey);
-                }
-              });
-              
+              // Fill in absent entries for registered employees if any exist
+              if (usersList && usersList.length > 0) {
+                usersList.forEach(function(u) {
+                  var id = u.roll || u.uid;
+                  var recKey = dateStr + "_" + id;
+                  if (!records[recKey]) {
+                    var statusStr = hObj ? ("Holiday (" + hObj.name + " - " + hObj.type + ")") : (dateObj.isSunday ? "Weekly Off" : "Absent");
+                    records[recKey] = {
+                      date: dateStr,
+                      id: id,
+                      name: u.name,
+                      role: u.role || "-",
+                      inTime: "-",
+                      outTime: "-",
+                      status: statusStr,
+                      type: "-",
+                      accepted: (hObj || dateObj.isSunday) ? true : false
+                    };
+                    order.push(recKey);
+                    hasData = true;
+                  }
               fetchNextDate(index + 1);
             })
             .catch(function(err) {

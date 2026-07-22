@@ -1352,6 +1352,40 @@ void setupDashboard() {
     request->send(200, "text/plain", "OK");
   });
 
+  server.on("/get-sql-history", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!isAuth(request)) return request->send(403, "text/plain", "Unauthorized");
+    if (!request->hasParam("date")) return request->send(400);
+    String dateStr = request->getParam("date")->value();
+    
+    // If sqlApiUrl is configured, proxy request to sql_bridge Python server
+    if (sqlApiUrl.length() > 0) {
+      String bridgeUrl = sqlApiUrl;
+      int protoIdx = bridgeUrl.indexOf("//");
+      int slashIdx = bridgeUrl.indexOf('/', (protoIdx != -1) ? protoIdx + 2 : 0);
+      if (slashIdx != -1) bridgeUrl = bridgeUrl.substring(0, slashIdx);
+      bridgeUrl += "/get-logs?date=" + dateStr;
+      
+      HTTPClient http;
+      http.begin(bridgeUrl);
+      http.setTimeout(2000);
+      int httpCode = http.GET();
+      if (httpCode == HTTP_CODE_OK) {
+        String payload = http.getString();
+        http.end();
+        return request->send(200, "text/csv", payload);
+      }
+      http.end();
+    }
+    
+    // Fallback to local LittleFS log history
+    String logPath = "/logs_" + dateStr + ".csv";
+    if (LittleFS.exists(logPath)) {
+      request->send(LittleFS, logPath, "text/csv");
+    } else {
+      request->send(200, "text/plain", "");
+    }
+  });
+
   server.on("/manual-punch", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (!isAuth(request)) return request->send(403, "text/plain", "Unauthorized");
     if (!request->hasParam("uid") || !request->hasParam("dir")) {
