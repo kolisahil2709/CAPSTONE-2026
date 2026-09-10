@@ -1,0 +1,56 @@
+# KiCad backup files
+*.kicad_sch.bak
+*.kicad_sch.bak*
+*.kicad_pcb.bak
+*.kicad_pcb.bak*
+*.kicad_pro.bak
+*.bak
+*.bak2
+*-backups/
+_autosave-*
+
+# KiCad lock files
+*.lck
+~*.kicad_sch
+~*.kicad_pcb
+~*.kicad_pro
+
+# KiCad auto-save
+_autosave-*
+
+# KiCad ERC/DRC reports (regenerated)
+*-erc.rpt
+*-drc.rpt
+
+# KiCad footprint cache (can be regenerated)
+*.kicad_mod.bak
+
+# Gerber build output (generated artifacts - commit separately if needed)
+# Comment these out if you want to commit Gerbers:
+# gerbers/
+# *.gbr
+# *.drl
+
+# Test/debug schematics
+test_*.kicad_sch
+test_*.pdf
+single*.kicad_sch
+single*.pdf
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# VS Code
+.vscode/
+.history/
+
+# Temp files
+*.tmp
+*.temp

@@ -1,0 +1,38 @@
+Item,Designator,Qty,Value / Model,Description,Package / Footprint,Manufacturer / Part Ref
+1,U1,1,ESP32-S3-WROOM-1-N16R8,Espressif Dual-Core 240MHz 16MB Flash 8MB PSRAM WiFi/BLE,RF_Module:ESP32-S3-WROOM-1,Espressif Systems
+2,U2,1,AMS1117-3.3 / AP2112K-3.3,High Current 3.3V Low-Dropout Linear Regulator (>=1.0A-1.5A peak),Package_TO_SOT_SMD:SOT-223 / SOT-23-5,Diodes Inc / Advanced Monolithic
+3,U3,1,24C512 (AT24C512C-SSHM-T),64 Kbyte (512Kb) I2C Serial EEPROM 400kHz/1MHz,Package_SO:SOIC-8_3.9x4.9mm_P1.27mm,Microchip Technology
+4,J1,1,TYPE-C-31-M-12,USB Type-C 16-Pin Receptacle (USB 2.0 Native OTG/Power),Connector_USB:USB_C_Receptacle_Palconn_UTC16-G,Korean Hroparts / Palconn
+5,J2,1,Screw_Terminal_01x02,External 5V DC Auxiliary Power Terminal (P=5.08mm),TerminalBlock:TerminalBlock_bornier-2_P5.08mm,Phoenix Contact
+6,J3,1,JST-SH-6P-1.0mm,"R503 Capacitive Fingerprint Sensor Interface (VCC, GND, TX, RX, WAKE, 3V3)",Connector_JST:JST_SH_SM06B-SRSS-TB_1x06-1MP_P1.00mm,JST Sales America
+7,J4,1,PinHeader_1x08_P2.54mm,MFRC522 13.56MHz RFID Reader SPI Breakout Header,Connector_PinHeader_2.54mm:PinHeader_1x08_P2.54mm_Vertical,Generic 2.54mm
+8,J5,1,PinHeader_1x10_P2.54mm,W5500 SPI Ethernet (LAN) Module Breakout Header,Connector_PinHeader_2.54mm:PinHeader_1x10_P2.54mm_Vertical,Generic 2.54mm
+9,J6,1,PinHeader_1x14_P2.54mm,"3.5"" TFT LCD (ILI9488) & XPT2046 Touch Breakout Header",Connector_PinHeader_2.54mm:PinHeader_1x14_P2.54mm_Vertical,Generic 2.54mm
+10,J7,1,PinHeader_1x03_P2.54mm,"WS2812B NeoPixel RGB Dynamic Status Header (+5V, DIN, GND)",Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical,Generic 2.54mm
+11,Q1,1,2N7002 / S8050,N-Channel MOSFET / NPN BJT for TFT Backlight PWM Control,Package_TO_SOT_SMD:SOT-23,ON Semiconductor / Diodes Inc
+12,Q2,1,S8050 / SS8050,NPN General Purpose Transistor 40V 700mA Buzzer Driver,Package_TO_SOT_SMD:SOT-23,Changjiang Electronics / ON Semi
+13,D1,1,USBLC6-2SC6,Ultra Low Capacitance ESD Protection Diode for USB & I/O,Package_TO_SOT_SMD:SOT-23-6,STMicroelectronics
+14,D2,1,SS34 (3A 40V),Schottky Barrier Rectifier Diode for DC Reverse Polarity Protection,Diode_SMD:D_SMA,Vishay / MDD
+15,D3,1,LED Green 0805,Authorized Access / Punch Success Indicator LED,LED_SMD:LED_0805_2012Metric,Everlight / Kingbright
+16,D4,1,LED Red 0805,Access Denied / System Alert Indicator LED,LED_SMD:LED_0805_2012Metric,Everlight / Kingbright
+17,D5,1,1N4148W,Fast Switching Flyback Protection Diode for Piezo Buzzer,Diode_SMD:D_SOD-123,Diodes Inc
+18,D6,1,LED Blue 0805,System +3.3V Power Good Indicator LED,LED_SMD:LED_0805_2012Metric,Everlight / Kingbright
+19,BZ1,1,Active Buzzer 5V/3.3V,"Piezoelectric Audible Indicator (85dB @ 10cm, 2.3kHz)",Buzzer_Beeper:Buzzer_12x9.5RM7.6,CUI Devices / Murata
+20,"SW1, SW2",2,Tactile Switch 6x6mm,Pushbuttons for RESET (EN) and BOOT (GPIO0),Button_Switch_SMD:SW_Push_SPST_NO_Alps_SKHH_Series,Alps Alpine / Omron
+21,F1,1,1.5A / 2.0A PTC Resettable,Polymeric PTC Fuse for USB Power Input Overcurrent Protection,Fuse:Fuse_1812_4532Metric,Littelfuse / Bel Fuse
+22,"R1, R2",2,5.1kΩ ±1% (0805),USB Type-C CC1 / CC2 Configuration Pulldown Resistors,Resistor_SMD:R_0805_2012Metric,Yageo / Panasonic
+23,"R3, R4",2,4.7kΩ ±1% (0805),"I2C SDA / SCL Hardware Pull-up Resistors (GPIO8, GPIO9)",Resistor_SMD:R_0805_2012Metric,Yageo / Panasonic
+24,R5,1,10kΩ ±1% (0805),Touch Screen IRQ (GPIO 21) Pull-up Resistor,Resistor_SMD:R_0805_2012Metric,Yageo / Panasonic
+25,R6,1,100Ω ±1% (0805),TFT Backlight Gate / Base Damping Resistor (GPIO 1),Resistor_SMD:R_0805_2012Metric,Yageo / Panasonic
+26,R7,1,10kΩ ±1% (0805),TFT Backlight Gate Pull-down Resistor (Default OFF at boot),Resistor_SMD:R_0805_2012Metric,Yageo / Panasonic
+27,R8,1,10Ω 0.25W (0805),TFT Backlight Current Limiter Resistor,Resistor_SMD:R_0805_2012Metric,Yageo / Panasonic
+28,"R9, R10",2,220Ω ±1% (0805),"Current Limiting Resistors for Green & Red Status LEDs (GPIO 2, GPIO 4)",Resistor_SMD:R_0805_2012Metric,Yageo / Panasonic
+29,R11,1,1kΩ ±1% (0805),Buzzer Transistor Base Current Limiting Resistor (GPIO 5),Resistor_SMD:R_0805_2012Metric,Yageo / Panasonic
+30,R12,1,10kΩ ±1% (0805),Buzzer Base Pull-down Resistor (Prevents buzzing during reset),Resistor_SMD:R_0805_2012Metric,Yageo / Panasonic
+31,"R13, R14",2,10kΩ ±1% (0805),Pull-up Resistors for ESP32 EN (Reset) & GPIO 0 (Boot),Resistor_SMD:R_0805_2012Metric,Yageo / Panasonic
+32,R15,1,1kΩ ±1% (0805),Current Limiting Resistor for Power LED (D6),Resistor_SMD:R_0805_2012Metric,Yageo / Panasonic
+33,R16,1,330Ω ±1% (0805),NeoPixel RGB LED DIN Protection Resistor,Resistor_SMD:R_0805_2012Metric,Yageo / Panasonic
+34,"C1, C4",2,100µF 16V Tantalum/Elec,Bulk Energy Storage Capacitors for 5V Input & 3.3V Rail (Transient Peak Buffering),Capacitor_Tantalum_SMD:CP_EIA-7343-31_Kemet-D,KEMET / AVX
+35,"C2, C5, C8, C11",4,10µF 16V X7R (0805),"Local Decoupling for LDO IN/OUT, R503 FP & W5500 Ethernet",Capacitor_SMD:C_0805_2012Metric,Murata / TDK
+36,C13,1,1µF 16V X7R (0805),ESP32-S3 EN Power-On Reset Delay Capacitor,Capacitor_SMD:C_0805_2012Metric,Murata / TDK
+37,"C3, C6, C7, C9, C10, C12, C14, C15, C16",9,100nF (0.1µF) 50V X7R (0805),High-Frequency Ceramic Bypass Capacitors for ICs and Headers,Capacitor_SMD:C_0805_2012Metric,Murata / TDK
