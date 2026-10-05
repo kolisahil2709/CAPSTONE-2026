@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "push": "git push origin payroll",
+    "pull": "git pull origin payroll",
+    "sync": "git pull origin payroll && git push origin payroll"
   },
   "dependencies": {
     "lucide-react": "^0.330.0",
