@@ -1,0 +1,181 @@
+:root {
+  --font-family: 'Outfit', sans-serif;
+  
+  /* HSL Color Palette - Sleek Dark Theme with Vibrant Accents */
+  --bg-color: hsl(220, 24%, 7%);
+  --surface-color: hsl(220, 24%, 12%);
+  --surface-hover: hsl(220, 24%, 17%);
+  
+  --text-primary: hsl(210, 40%, 98%);
+  --text-secondary: hsl(214, 20%, 65%);
+  --text-muted: hsl(214, 15%, 45%);
+  
+  --primary-accent: hsl(250, 95%, 65%);
+  --primary-hover: hsl(250, 95%, 72%);
+  --secondary-accent: hsl(320, 85%, 60%);
+  
+  --success: hsl(150, 75%, 45%);
+  --warning: hsl(45, 95%, 55%);
+  --error: hsl(0, 85%, 60%);
+  
+  --border-color: hsl(220, 20%, 20%);
+  --glass-bg: hsla(220, 24%, 12%, 0.6);
+  --glass-border: hsla(220, 24%, 30%, 0.2);
+  
+  /* Shadows and Transitions */
+  --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 10px 20px rgba(0, 0, 0, 0.2);
+  --shadow-glow: 0 0 20px hsla(250, 95%, 65%, 0.3);
+  
+  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  --border-radius: 16px;
+  --border-radius-sm: 8px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-image: 
+    radial-gradient(circle at 15% 50%, hsla(250, 95%, 65%, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, hsla(320, 85%, 60%, 0.08), transparent 25%);
+}
+
+#root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Glassmorphism Container */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-md);
+  padding: 2rem;
+  transition: transform var(--transition-smooth), box-shadow var(--transition-smooth);
+}
+
+.glass-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary-accent), var(--secondary-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Inputs */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.input-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.input-field {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.8rem 1rem;
+  border-radius: var(--border-radius-sm);
+  font-family: var(--font-family);
+  font-size: 1rem;
+  transition: all var(--transition-fast);
+  outline: none;
+}
+
+.input-field:focus {
+  border-color: var(--primary-accent);
+  box-shadow: 0 0 0 2px hsla(250, 95%, 65%, 0.2);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.5rem;
+  border-radius: var(--border-radius-sm);
+  font-family: var(--font-family);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition-fast);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-accent), var(--secondary-accent));
+  color: white;
+  box-shadow: 0 4px 15px hsla(250, 95%, 65%, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px hsla(250, 95%, 65%, 0.4);
+  filter: brightness(1.1);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s var(--transition-smooth) forwards;
+}
+
+/* Results Card */
+.results-card {
+  background: linear-gradient(145deg, var(--surface-color), var(--surface-hover));
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 2rem;
+  text-align: center;
+}
+
+.result-value {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--success);
+  margin: 1rem 0;
+  text-shadow: 0 0 20px hsla(150, 75%, 45%, 0.2);
+}
