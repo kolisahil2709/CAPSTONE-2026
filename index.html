@@ -2135,32 +2135,12 @@
         <div class="topbar-left">
           <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
           <div class="topbar-titles">
-            <h1 class="topbar-view-title" id="view-header-title">Executive Dashboard</h1>
-            <p class="topbar-view-sub" id="view-header-sub">Real-time biometric monitoring, live punch stream & attendance matrix</p>
+            <h1 class="topbar-view-title" id="view-header-title" style="font-weight:800; letter-spacing:0.8px; font-size:22px; background:linear-gradient(135deg, #ffffff 40%, #94a3b8 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">WELCOME TO ChronosMIS</h1>
+            <p class="topbar-view-sub" id="view-header-sub" style="display:none;"></p>
           </div>
         </div>
         <div class="topbar-right">
-          <div class="clock-pill" id="live-clock">--:--:-- --</div>
-          <div class="clock-pill" id="last-sync-pill" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;" onclick="openFirebaseLinkModal()" title="Click to view/configure Firebase Realtime Database">
-            <span>☁️</span>
-            <span id="last-sync-text">Cloud Sync: Ready</span>
-          </div>
-          
-          <button class="btn btn-outline btn-sm" onclick="openFirebaseLinkModal()" title="Configure Firebase Database Link & Sync">
-            🔥 <span>Firebase Link</span>
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="fetchFirebaseData(true)" title="Instantly synchronize all data from Firebase Cloud">
-            🔄 <span>Sync Now</span>
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="lockPortalSession()" title="Lock Portal Session (Password Required)">
-            🔒 <span>Lock</span>
-          </button>
-          <button class="btn-icon" onclick="toggleTheme()" title="Switch Light/Dark Mode">
-            🌓
-          </button>
-          <button class="btn btn-primary btn-sm" onclick="openSettingsModal()">
-            ⚙️ <span>Settings</span>
-          </button>
+          <div class="clock-pill" id="live-clock" style="font-size:13px; font-weight:600; padding:8px 20px; border-radius:30px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); letter-spacing:0.5px; box-shadow:0 2px 12px rgba(0,0,0,0.25);">--:--:-- --</div>
         </div>
       </header>
 
@@ -4324,7 +4304,7 @@
 
       // 3. Update topbar titles
       var titles = {
-        'dashboard': { title: 'Executive Dashboard', sub: 'Real-time biometric monitoring, live punch stream & attendance matrix' },
+        'dashboard': { title: 'WELCOME TO ChronosMIS', sub: '' },
         'att-daily': { title: 'Daily Attendance Ledger', sub: 'Verified daily presence, check-in timestamps, working hours & check-in verification' },
         'att-monthly': { title: 'Individual Monthly Attendance', sub: 'Single employee monthly attendance sheet, shifts, overtime & day-by-day logs' },
         'att-monthly-all': { title: 'Organization Monthly Attendance Matrix', sub: 'Complete company-wide 31-day attendance matrix, presence totals & master muster roll' },
@@ -4336,7 +4316,11 @@
 
       var t = titles[viewName] || { title: 'chronosMIS Portal', sub: '24/7 Cloud Biometric Server' };
       document.getElementById('view-header-title').innerText = t.title;
-      document.getElementById('view-header-sub').innerText = t.sub;
+      var subEl = document.getElementById('view-header-sub');
+      if (subEl) {
+        subEl.innerText = t.sub || '';
+        subEl.style.display = t.sub ? 'block' : 'none';
+      }
 
       // 4. View-specific renders
       if (viewName === 'payroll') calculateAndRenderPayroll();
