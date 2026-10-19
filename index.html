@@ -1980,6 +1980,329 @@
         color: #000 !important;
       }
     }
+
+    /* =========================================================================
+       PREMIUM STYLISH DASHBOARD REDESIGN & MICRO-ANIMATIONS
+       ========================================================================= */
+
+    /* Topbar refinement */
+    .app-topbar {
+      padding: 16px 32px;
+      background: rgba(13, 18, 31, 0.75);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    [data-theme="light"] .app-topbar {
+      background: rgba(255, 255, 255, 0.85);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    }
+
+    /* KPI Grid — 4 clean symmetric columns with auto-responsive fold */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-bottom: 26px;
+    }
+    @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px)  { .kpi-grid { grid-template-columns: 1fr; } }
+
+    /* KPI Card — Modern Glassmorphism & Micro-animations */
+    .kpi-card {
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.04) 0%, rgba(15, 23, 42, 0.65) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 22px 22px 20px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), 
+                  box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), 
+                  border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      animation: kpiEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    [data-theme="light"] .kpi-card {
+      background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Staggered entrance animation for cards */
+    .kpi-card:nth-child(1) { animation-delay: 0.05s; }
+    .kpi-card:nth-child(2) { animation-delay: 0.12s; }
+    .kpi-card:nth-child(3) { animation-delay: 0.19s; }
+    .kpi-card:nth-child(4) { animation-delay: 0.26s; }
+
+    @keyframes kpiEntrance {
+      0% {
+        opacity: 0;
+        transform: translateY(22px) scale(0.96);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* Ambient top accent hairline */
+    .kpi-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--kpi-accent, var(--primary)), transparent);
+      opacity: 0.7;
+      transition: opacity 0.3s ease, height 0.3s ease;
+    }
+
+    /* Card Interactive Hover */
+    .kpi-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35), 0 0 28px var(--kpi-glow, rgba(79, 70, 229, 0.25));
+    }
+
+    .kpi-card:hover::after {
+      opacity: 1;
+      height: 3px;
+    }
+
+    [data-theme="light"] .kpi-card:hover {
+      border-color: rgba(0, 0, 0, 0.15);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.1), 0 0 20px var(--kpi-glow, rgba(79, 70, 229, 0.15));
+    }
+
+    .kpi-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0;
+    }
+
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+    }
+
+    .kpi-icon-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.3s ease;
+    }
+
+    .kpi-card:hover .kpi-icon-badge {
+      transform: scale(1.15) rotate(6deg);
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .kpi-value {
+      font-family: var(--font-heading);
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+      letter-spacing: -0.5px;
+    }
+
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Live Pulsing Beacon for Hardware Terminal */
+    .beacon-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #06b6d4;
+      box-shadow: 0 0 12px #06b6d4;
+      position: relative;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .beacon-dot::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px solid #06b6d4;
+      animation: beaconWave 2s infinite cubic-bezier(0, 0.2, 0.8, 1);
+    }
+
+    @keyframes beaconWave {
+      0% { transform: scale(0.5); opacity: 1; }
+      100% { transform: scale(2.4); opacity: 0; }
+    }
+
+    /* Progress Bar with Shimmer Animation */
+    .kpi-progress-track {
+      background: rgba(255, 255, 255, 0.06);
+      height: 5px;
+      border-radius: 10px;
+      margin-top: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    [data-theme="light"] .kpi-progress-track {
+      background: #e2e8f0;
+    }
+
+    .kpi-progress-bar {
+      height: 100%;
+      border-radius: 10px;
+      background: linear-gradient(90deg, #10b981 0%, #34d399 50%, #10b981 100%);
+      background-size: 200% 100%;
+      animation: progressShimmer 3s infinite linear;
+      transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes progressShimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Weekly Chart Card — Sleek & Animated */
+    .weekly-chart-card {
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(15, 23, 42, 0.6) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 24px 26px 22px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      transition: transform 0.3s ease, border-color 0.3s ease;
+      animation: kpiEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation-delay: 0.3s;
+    }
+
+    [data-theme="light"] .weekly-chart-card {
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .weekly-chart-card:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+
+    .chart-header-row { margin-bottom: 18px; gap: 12px; }
+    .card-title { font-size: 16px; font-weight: 700; }
+    .card-subtitle { font-size: 12px; color: var(--text-dim); }
+
+    .weekly-bars-container {
+      gap: 12px;
+      min-height: 170px;
+      padding-top: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .bar-track {
+      height: 115px;
+      max-width: 44px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+    [data-theme="light"] .bar-track { background: #f1f5f9; border-color: #e2e8f0; }
+
+    .bar-fill {
+      border-radius: 6px 6px 0 0;
+      transition: height 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease;
+    }
+    .day-column:hover .bar-fill {
+      filter: brightness(1.15);
+      transform: scaleY(1.02);
+    }
+
+    .day-name { font-size: 12px; font-weight: 600; }
+    .day-date { font-size: 10px; }
+    .bar-rate-tag { font-size: 10.5px; padding: 2px 6px; border-radius: 6px; }
+
+    .weekly-chart-footer { padding-top: 16px; gap: 14px; }
+    .chart-stat-label { font-size: 10.5px; letter-spacing: 0.6px; }
+    .chart-stat-value { font-size: 15px; font-weight: 700; }
+    .chart-badge-pill { font-size: 11px; padding: 4px 12px; }
+
+    /* General Cards */
+    .card {
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(15, 23, 42, 0.6) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 22px 24px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      transition: border-color 0.3s ease;
+      animation: kpiEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation-delay: 0.36s;
+    }
+
+    [data-theme="light"] .card {
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .card-header { margin-bottom: 16px; }
+
+    /* Tables */
+    .table-container {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th {
+      background: rgba(255, 255, 255, 0.03);
+      font-size: 10.5px;
+      letter-spacing: 0.8px;
+      padding: 12px 16px;
+      color: var(--text-dim);
+    }
+    [data-theme="light"] th { background: #f8fafc; }
+    td {
+      padding: 12px 16px;
+      font-size: 13px;
+      transition: background-color 0.2s ease;
+    }
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    /* App content body */
+    .app-content-body { padding: 28px 32px 60px; }
+    @media (max-width: 900px) { .app-content-body { padding: 16px; } }
   </style>
 </head>
 <body>
@@ -2151,10 +2474,10 @@
              VIEW 1: DASHBOARD
              =================================================================== -->
         <section id="view-dashboard" class="content-view active">
-          <!-- Comprehensive 8-Card Executive KPI Matrix -->
-          <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));">
+          <!-- Minimalist Animated Executive KPI Matrix (4 Focus Cards) -->
+          <div class="kpi-grid">
             <!-- 1. Enrolled Staff -->
-            <div class="kpi-card" style="--kpi-accent: #4f46e5;">
+            <div class="kpi-card" style="--kpi-accent: #4f46e5; --kpi-glow: rgba(79, 70, 229, 0.35);">
               <div class="kpi-header">
                 <span class="kpi-label">Total Enrolled Staff</span>
                 <span class="kpi-icon-badge">👥</span>
@@ -2164,30 +2487,20 @@
             </div>
 
             <!-- 2. Present Today -->
-            <div class="kpi-card" style="--kpi-accent: #10b981;">
+            <div class="kpi-card" style="--kpi-accent: #10b981; --kpi-glow: rgba(16, 185, 129, 0.35);">
               <div class="kpi-header">
                 <span class="kpi-label">Present Today</span>
                 <span class="kpi-icon-badge">🟢</span>
               </div>
               <div class="kpi-value" id="kpi-present-today" style="color:#10b981;">18</div>
               <div class="kpi-sub" id="kpi-present-pct" style="font-weight:600; color:#10b981;">90% Attendance Rate</div>
-              <div style="background:rgba(255,255,255,0.06); height:4px; border-radius:4px; margin-top:8px; overflow:hidden;">
-                <div id="kpi-present-bar" style="background:#10b981; height:100%; width:90%;"></div>
+              <div class="kpi-progress-track">
+                <div id="kpi-present-bar" class="kpi-progress-bar" style="width:90%;"></div>
               </div>
             </div>
 
-            <!-- 3. Late Arrivals -->
-            <div class="kpi-card" style="--kpi-accent: #f59e0b;">
-              <div class="kpi-header">
-                <span class="kpi-label">Late Arrivals Today</span>
-                <span class="kpi-icon-badge">⚠️</span>
-              </div>
-              <div class="kpi-value" id="kpi-late-today" style="color:#f59e0b;">0</div>
-              <div class="kpi-sub" id="kpi-late-sub">Punched after shift grace period</div>
-            </div>
-
-            <!-- 4. Absent Today -->
-            <div class="kpi-card" style="--kpi-accent: #ef4444;">
+            <!-- 3. Absent Today -->
+            <div class="kpi-card" style="--kpi-accent: #ef4444; --kpi-glow: rgba(239, 68, 68, 0.35);">
               <div class="kpi-header">
                 <span class="kpi-label">Absent Today</span>
                 <span class="kpi-icon-badge">🔴</span>
@@ -2196,44 +2509,17 @@
               <div class="kpi-sub" id="kpi-absent-sub">Out of total roster</div>
             </div>
 
-            <!-- 5. Total Scans -->
-            <div class="kpi-card" style="--kpi-accent: #ff6b00;">
-              <div class="kpi-header">
-                <span class="kpi-label">Total Verified Scans</span>
-                <span class="kpi-icon-badge">⚡</span>
-              </div>
-              <div class="kpi-value" id="kpi-total-punches" style="color:var(--primary);">162</div>
-              <div class="kpi-sub" id="kpi-punches-sub">Across 9 active dates in October</div>
-            </div>
-
-            <!-- 6. Hardware Terminal -->
-            <div class="kpi-card" style="--kpi-accent: #06b6d4;">
+            <!-- 4. Hardware Terminal -->
+            <div class="kpi-card" style="--kpi-accent: #06b6d4; --kpi-glow: rgba(6, 182, 212, 0.35);">
               <div class="kpi-header">
                 <span class="kpi-label">Biometric Machine</span>
                 <span class="kpi-icon-badge">📡</span>
               </div>
-              <div class="kpi-value" id="kpi-terminal-status" style="color:#06b6d4; font-size:22px;">ONLINE</div>
+              <div class="kpi-value" style="display:flex; align-items:center; gap:10px;">
+                <span class="beacon-dot"></span>
+                <span id="kpi-terminal-status" style="color:#06b6d4; font-size:24px;">ONLINE</span>
+              </div>
               <div class="kpi-sub" id="kpi-terminal-sub">ESP32 Terminal · IP 192.168.0.108</div>
-            </div>
-
-            <!-- 7. Optical Sensor Templates -->
-            <div class="kpi-card" style="--kpi-accent: #8b5cf6;">
-              <div class="kpi-header">
-                <span class="kpi-label">R503 Sensor Capacity</span>
-                <span class="kpi-icon-badge">🧬</span>
-              </div>
-              <div class="kpi-value" id="kpi-sensor-slots" style="color:#8b5cf6;">15 / 200</div>
-              <div class="kpi-sub" id="kpi-sensor-sub">7.5% optical flash storage used</div>
-            </div>
-
-            <!-- 8. Cloud Database Engine -->
-            <div class="kpi-card" style="--kpi-accent: #10b981;">
-              <div class="kpi-header">
-                <span class="kpi-label">Cloud Database Engine</span>
-                <span class="kpi-icon-badge">☁️</span>
-              </div>
-              <div class="kpi-value" id="kpi-cloud-engine" style="font-size:20px; color:#10b981;">CONNECTED</div>
-              <div class="kpi-sub" id="kpi-cloud-sub">chronosMIS Firebase Realtime Sync</div>
             </div>
           </div>
 
