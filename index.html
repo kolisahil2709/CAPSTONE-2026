@@ -2662,29 +2662,13 @@
           <span class="nav-label">Payroll</span>
           <span class="nav-pill" style="color:var(--success);">AUTO</span>
         </button>
-        <button class="nav-btn" id="nav-devices" onclick="switchView('devices', this)">
-          <span class="nav-icon">📡</span>
-          <span class="nav-label">Devices & R503</span>
-          <span class="nav-pill" id="badge-device-ip">IP</span>
-        </button>
         <button class="nav-btn" id="nav-audit" onclick="switchView('audit', this)">
           <span class="nav-icon">📋</span>
           <span class="nav-label">Audit Trail</span>
         </button>
-      </div>
-
-      <div class="sidebar-footer">
-        <div class="sidebar-quick-toggles">
-          <button class="btn-quick-tool" onclick="toggleTheme()" id="sidebar-theme-toggle">
-            <span id="theme-btn-icon">🌓</span> <span id="theme-btn-label">Theme</span>
-          </button>
-          <button class="btn-quick-tool" onclick="toggleAudio()" id="sound-btn">
-            🔔 <span>Chime</span>
-          </button>
-        </div>
-        <button class="btn-sidebar-settings" onclick="openSettingsModal()">
-          <span>⚙️</span>
-          <span>System Settings</span>
+        <button class="nav-btn" id="nav-configuration" onclick="openSettingsModal()">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">Configuration</span>
         </button>
       </div>
     </aside>
@@ -2700,8 +2684,12 @@
             <p class="topbar-view-sub" id="view-header-sub" style="display:none;"></p>
           </div>
         </div>
-        <div class="topbar-right">
-          <div class="clock-pill" id="live-clock" style="font-size:13px; font-weight:600; padding:8px 20px; border-radius:30px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); letter-spacing:0.5px; box-shadow:0 2px 12px rgba(0,0,0,0.25);">--:--:-- --</div>
+        <div class="topbar-right" style="display:flex; align-items:center; gap:10px;">
+          <div class="clock-pill" id="live-clock" style="font-size:13px; font-weight:600; padding:8px 18px; border-radius:30px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); letter-spacing:0.5px; box-shadow:0 2px 12px rgba(0,0,0,0.25);">--:--:-- --</div>
+          <button type="button" class="btn btn-outline btn-sm" onclick="toggleTheme()" id="topbar-theme-toggle" title="Toggle Dark / Light Mode" style="border-radius:30px; padding:7px 14px; display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; cursor:pointer; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text); transition:all 0.2s ease;">
+            <span id="theme-btn-icon">🌓</span>
+            <span id="theme-btn-label">Theme</span>
+          </button>
         </div>
       </header>
 
