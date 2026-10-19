@@ -2921,17 +2921,14 @@
                     <th>Full Name</th>
                     <th>Department</th>
                     <th>Shift</th>
-                    <th>Finger Slot</th>
-                    <th>RFID Card</th>
                     <th>Today Status</th>
                     <th>First In</th>
                     <th>Last Out</th>
-                    <th>Transfer Date / Device IP</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="employee-table-body">
-                  <tr><td colspan="11" style="text-align:center; padding:24px; color:var(--text-muted);">Loading employee directory...</td></tr>
+                  <tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);">Loading employee directory...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -6865,7 +6862,7 @@
       });
 
       if (keys.length === 0) {
-        if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:24px; color:var(--text-muted);">No employees enrolled yet. Use Device Gateway to sync.</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);">No employees enrolled yet. Use Device Gateway to sync.</td></tr>';
         if (cardsContainer) cardsContainer.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:30px;">No employees enrolled yet.</div>';
         return;
       }
@@ -6888,24 +6885,9 @@
           '<td><b style="color:var(--text); font-size:13px;">' + (emp.name || 'Unnamed') + '</b><br><span style="font-size:11px; color:var(--text-dim);">' + (emp.role || '-') + '</span></td>' +
           '<td><span class="badge" style="background:rgba(255,255,255,0.06);">' + (emp.dept || 'General') + '</span></td>' +
           '<td><span class="badge" style="background:rgba(255,255,255,0.06); font-family:var(--font-mono); font-size:11px; font-weight:600; color:var(--text); letter-spacing:0.5px;">' + (emp.shiftCode || emp.shiftName || 'GEN') + '</span></td>' +
-          '<td>' + fingerBadge + '</td>' +
-          '<td>' + rfidBadge + '</td>' +
           '<td>' + statusBadge + '</td>' +
           '<td><code style="color:var(--success); font-weight:600;">' + formatTime24(emp.firstIn) + '</code>' + (emp.lastDateFormatted || emp.lastDate ? ('<br><span style="font-size:10px; color:var(--text-dim); font-family:var(--font-mono);">' + (emp.lastDateFormatted || formatDateDisplay(emp.lastDate)) + '</span>') : '') + '</td>' +
           '<td><code style="color:var(--primary); font-weight:600;">' + formatTime24(emp.lastOut) + '</code>' + (emp.lastDateFormatted || emp.lastDate ? ('<br><span style="font-size:10px; color:var(--text-dim); font-family:var(--font-mono);">' + (emp.lastDateFormatted || formatDateDisplay(emp.lastDate)) + '</span>') : '') + '</td>' +
-          '<td>' +
-            '<div style="display:flex; flex-direction:column; gap:2px;">' +
-              '<span class="badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-size:10px; font-family:var(--font-mono); width:fit-content;">' +
-                '💻 ' + empDevIp +
-              '</span>' +
-              '<span style="font-size:11px; color:var(--text); font-family:var(--font-mono); font-weight:600;">' +
-                '📅 ' + empTransferDate +
-              '</span>' +
-              '<span style="font-size:9.5px; color:#10b981; font-weight:500;">' +
-                '● ' + (emp.deviceTransferStatus || 'Transferred to Device') +
-              '</span>' +
-            '</div>' +
-          '</td>' +
           '<td><button class="btn btn-outline btn-sm" onclick="viewEmployeeDossier(\'' + (emp.roll || k) + '\')">Dossier</button></td>' +
         '</tr>';
 
