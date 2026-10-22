@@ -19,9 +19,33 @@ async function deployToFirebaseHosting() {
   const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
   const rt = cfg.tokens.refresh_token;
 
-  const auth = require(path.join(process.env.APPDATA, 'npm', 'node_modules', 'firebase-tools', 'lib', 'auth.js'));
-  const authRes = await auth.getAccessToken(rt, []);
-  const token = authRes.access_token;
+  let token = cfg.tokens.access_token;
+  if (!token || (cfg.tokens.expires_at && Date.now() > (cfg.tokens.expires_at - 60000))) {
+    console.log('   Refreshing access token via Google OAuth endpoint...');
+    try {
+      const refreshRes = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: (cfg.user && cfg.user.azp) || '563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com',
+          grant_type: 'refresh_token',
+          refresh_token: rt
+        })
+      });
+      if (refreshRes.ok) {
+        const tokenData = await refreshRes.json();
+        token = tokenData.access_token;
+        cfg.tokens.access_token = token;
+        cfg.tokens.expires_at = Date.now() + (tokenData.expires_in * 1000);
+        fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), 'utf8');
+        console.log('✓ Token refreshed successfully');
+      } else {
+        console.log('   Using existing access token fallback');
+      }
+    } catch (e) {
+      console.log('   Using existing access token fallback:', e.message);
+    }
+  }
   console.log('✓ Authenticated as:', cfg.user ? cfg.user.email : 'Google Account');
 
   // 2. Prepare files to deploy
