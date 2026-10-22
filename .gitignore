@@ -1,0 +1,10 @@
+# Backups & Temporary files
+*.bak
+*.tmp
+*~
+
+# Operating System Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
